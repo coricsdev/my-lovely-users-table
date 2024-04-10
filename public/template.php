@@ -48,15 +48,15 @@ do_action('my_lovely_users_before_table_render');
                     <?php
                     // Checking if the key matches the expected ones and echoing accordingly.
                     if (in_array($key, ['id', 'name', 'username'], true)) {
-                        echo '<a href="#" class="user-link" data-id="' 
-                            . esc_attr($user['id']) . '">' 
-                            . esc_html($user[$key]) 
+                        echo '<a href="#" class="user-link" data-id="'
+                            . esc_attr($user['id']) . '">'
+                            . esc_html($user[$key])
                             . '</a>';
                     }
                     // For keys not matching 'id', 'name', or 'username', handle differently.
                     // This handles the scenario without using else by effectively having a fallback pattern.
-                    echo !in_array($key, ['id', 'name', 'username'], true) 
-                        ? (isset($user[$key]) ? esc_html($user[$key]) : '') 
+                    echo !in_array($key, ['id', 'name', 'username'], true)
+                        ? (isset($user[$key]) ? esc_html($user[$key]) : '')
                         : '';
                     ?>
                     </td>
