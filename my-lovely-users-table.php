@@ -10,6 +10,11 @@ if (!defined('WPINC')) {
     die;
 }
 
+// Include Composer's autoloader
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
+
 // Define plugin directory constant for easy access to file paths
 define('MY_LOVELY_USERS_TABLE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
@@ -24,3 +29,11 @@ function run_my_lovely_users_table() {
     $plugin->run();
 }
 run_my_lovely_users_table();
+
+function my_lovely_users_table_header() {
+    require plugin_dir_path(__FILE__) . 'public/header.php';
+}
+
+function my_lovely_users_table_footer() {
+    require plugin_dir_path(__FILE__) . 'public/footer.php';
+}
