@@ -3,17 +3,20 @@
  * PHPCompatibility, an external standard for PHP_CodeSniffer.
  *
  * @package   PHPCompatibility
- * @copyright 2012-2019 PHPCompatibility Contributors
+ * @copyright 2012-2020 PHPCompatibility Contributors
  * @license   https://opensource.org/licenses/LGPL-3.0 LGPL3
  * @link      https://github.com/PHPCompatibility/PHPCompatibility
  */
 
 namespace PHPCompatibility\Sniffs\Operators;
 
+use PHPCompatibility\Helpers\ScannedCode;
 use PHPCompatibility\Sniff;
-use PHPCompatibility\PHPCSHelper;
-use PHP_CodeSniffer_File as File;
-use PHP_CodeSniffer_Tokens as Tokens;
+use PHP_CodeSniffer\Files\File;
+use PHPCSUtils\BackCompat\BCFile;
+use PHPCSUtils\BackCompat\BCTokens;
+use PHPCSUtils\Utils\MessageHelper;
+use PHPCSUtils\Utils\Operators;
 
 /**
  * The left-associativity of the ternary operator is deprecated in PHP 7.4 and
@@ -36,15 +39,15 @@ class RemovedTernaryAssociativitySniff extends Sniff
      *
      * @since 9.2.0
      *
-     * @var array
+     * @var array<string, true>
      */
-    private $tokensWithLowerPrecedence = array(
+    private $tokensWithLowerPrecedence = [
         'T_YIELD_FROM'  => true,
         'T_YIELD'       => true,
         'T_LOGICAL_AND' => true,
         'T_LOGICAL_OR'  => true,
         'T_LOGICAL_XOR' => true,
-    );
+    ];
 
 
     /**
@@ -52,11 +55,11 @@ class RemovedTernaryAssociativitySniff extends Sniff
      *
      * @since 9.2.0
      *
-     * @return array
+     * @return array<int|string>
      */
     public function register()
     {
-        return array(\T_INLINE_THEN);
+        return [\T_INLINE_THEN];
     }
 
     /**
@@ -64,20 +67,20 @@ class RemovedTernaryAssociativitySniff extends Sniff
      *
      * @since 9.2.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param int                   $stackPtr  The position of the current token
-     *                                         in the stack passed in $tokens.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile The file being scanned.
+     * @param int                         $stackPtr  The position of the current token
+     *                                               in the stack passed in $tokens.
      *
      * @return void
      */
     public function process(File $phpcsFile, $stackPtr)
     {
-        if ($this->supportsAbove('7.4') === false) {
+        if (ScannedCode::shouldRunOnOrAbove('7.4') === false) {
             return;
         }
 
         $tokens         = $phpcsFile->getTokens();
-        $endOfStatement = PHPCSHelper::findEndOfStatement($phpcsFile, $stackPtr);
+        $endOfStatement = BCFile::findEndOfStatement($phpcsFile, $stackPtr);
         if ($tokens[$endOfStatement]['code'] !== \T_SEMICOLON
             && $tokens[$endOfStatement]['code'] !== \T_COLON
             && $tokens[$endOfStatement]['code'] !== \T_COMMA
@@ -114,7 +117,7 @@ class RemovedTernaryAssociativitySniff extends Sniff
             }
 
             // Check for operators with lower operator precedence.
-            if (isset(Tokens::$assignmentTokens[$tokens[$i]['code']])
+            if (isset(BCTokens::assignmentTokens()[$tokens[$i]['code']])
                 || isset($this->tokensWithLowerPrecedence[$tokens[$i]['code']])
             ) {
                 break;
@@ -123,7 +126,7 @@ class RemovedTernaryAssociativitySniff extends Sniff
             if ($tokens[$i]['code'] === \T_INLINE_THEN) {
                 ++$ternaryCount;
 
-                if ($this->isShortTernary($phpcsFile, $i) === true) {
+                if (Operators::isShortTernary($phpcsFile, $i) === true) {
                     ++$shortTernaryCount;
                 }
 
@@ -143,15 +146,17 @@ class RemovedTernaryAssociativitySniff extends Sniff
 
         if ($ternaryCount > 1 && $ternaryCount === $elseCount && $ternaryCount > $shortTernaryCount) {
             $message = 'The left-associativity of the ternary operator has been deprecated in PHP 7.4';
+            $code    = 'Deprecated';
             $isError = false;
-            if ($this->supportsAbove('8.0') === true) {
+            if (ScannedCode::shouldRunOnOrAbove('8.0') === true) {
                 $message .= ' and removed in PHP 8.0';
+                $code     = 'Removed';
                 $isError  = true;
             }
 
             $message .= '. Multiple consecutive ternaries detected. Use parenthesis to clarify the order in which the operations should be executed';
 
-            $this->addMessage($phpcsFile, $message, $stackPtr, $isError);
+            MessageHelper::addMessage($phpcsFile, $message, $stackPtr, $isError, $code);
         }
     }
 }

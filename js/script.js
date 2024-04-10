@@ -7,7 +7,7 @@ jQuery(document).ready(function($) {
             url: mlutAjax.ajaxurl,
             method: 'POST',
             data: {
-                action: 'fetch_user_details',
+                action: 'fetch_user_details', // Ensure this matches your PHP action hook.
                 user_id: userId
             },
             success: function(response) {

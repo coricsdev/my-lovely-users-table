@@ -3,16 +3,18 @@
  * PHPCompatibility, an external standard for PHP_CodeSniffer.
  *
  * @package   PHPCompatibility
- * @copyright 2012-2019 PHPCompatibility Contributors
+ * @copyright 2012-2020 PHPCompatibility Contributors
  * @license   https://opensource.org/licenses/LGPL-3.0 LGPL3
  * @link      https://github.com/PHPCompatibility/PHPCompatibility
  */
 
 namespace PHPCompatibility\Sniffs\MethodUse;
 
+use PHPCompatibility\Helpers\ScannedCode;
 use PHPCompatibility\Sniff;
-use PHP_CodeSniffer_File as File;
-use PHP_CodeSniffer_Tokens as Tokens;
+use PHP_CodeSniffer\Files\File;
+use PHP_CodeSniffer\Util\Tokens;
+use PHPCSUtils\Tokens\Collections;
 
 /**
  * Detect direct calls to the `__clone()` magic method, which is allowed since PHP 7.0.
@@ -32,31 +34,15 @@ class NewDirectCallsToCloneSniff extends Sniff
 {
 
     /**
-     * Tokens which indicate class internal use.
-     *
-     * @since 9.3.2
-     *
-     * @var array
-     */
-    protected $classInternal = array(
-        \T_PARENT => true,
-        \T_SELF   => true,
-        \T_STATIC => true,
-    );
-
-    /**
      * Returns an array of tokens this test wants to listen for.
      *
      * @since 9.1.0
      *
-     * @return array
+     * @return array<int|string>
      */
     public function register()
     {
-        return array(
-            \T_DOUBLE_COLON,
-            \T_OBJECT_OPERATOR,
-        );
+        return Collections::objectOperators();
     }
 
     /**
@@ -64,15 +50,15 @@ class NewDirectCallsToCloneSniff extends Sniff
      *
      * @since 9.1.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param int                   $stackPtr  The position of the current token in
-     *                                         the stack passed in $tokens.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile The file being scanned.
+     * @param int                         $stackPtr  The position of the current token in
+     *                                               the stack passed in $tokens.
      *
      * @return void
      */
     public function process(File $phpcsFile, $stackPtr)
     {
-        if ($this->supportsBelow('5.6') === false) {
+        if (ScannedCode::shouldRunOnOrBelow('5.6') === false) {
             return;
         }
 
@@ -91,7 +77,7 @@ class NewDirectCallsToCloneSniff extends Sniff
             return;
         }
 
-        if (strtolower($tokens[$nextNonEmpty]['content']) !== '__clone') {
+        if (\strtolower($tokens[$nextNonEmpty]['content']) !== '__clone') {
             // Not a call to the __clone() method.
             return;
         }
@@ -103,7 +89,9 @@ class NewDirectCallsToCloneSniff extends Sniff
         }
 
         $prevNonEmpty = $phpcsFile->findPrevious(Tokens::$emptyTokens, ($stackPtr - 1), null, true);
-        if ($prevNonEmpty === false || isset($this->classInternal[$tokens[$prevNonEmpty]['code']])) {
+        if ($prevNonEmpty === false
+            || isset(Collections::ooHierarchyKeywords()[$tokens[$prevNonEmpty]['code']])
+        ) {
             // Class internal call to __clone().
             return;
         }

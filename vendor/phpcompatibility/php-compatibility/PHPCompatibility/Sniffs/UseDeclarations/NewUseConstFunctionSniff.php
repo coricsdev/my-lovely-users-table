@@ -3,16 +3,18 @@
  * PHPCompatibility, an external standard for PHP_CodeSniffer.
  *
  * @package   PHPCompatibility
- * @copyright 2012-2019 PHPCompatibility Contributors
+ * @copyright 2012-2020 PHPCompatibility Contributors
  * @license   https://opensource.org/licenses/LGPL-3.0 LGPL3
  * @link      https://github.com/PHPCompatibility/PHPCompatibility
  */
 
 namespace PHPCompatibility\Sniffs\UseDeclarations;
 
+use PHPCompatibility\Helpers\ScannedCode;
 use PHPCompatibility\Sniff;
-use PHP_CodeSniffer_File as File;
-use PHP_CodeSniffer_Tokens as Tokens;
+use PHP_CodeSniffer\Files\File;
+use PHP_CodeSniffer\Util\Tokens;
+use PHPCSUtils\Utils\UseStatements;
 
 /**
  * Detect importing constants and functions via a `use` statement.
@@ -37,23 +39,23 @@ class NewUseConstFunctionSniff extends Sniff
      *
      * @since 7.1.4
      *
-     * @var array(string => string)
+     * @var array<string, bool>
      */
-    protected $validUseNames = array(
+    protected $validUseNames = [
         'const'    => true,
         'function' => true,
-    );
+    ];
 
     /**
      * Returns an array of tokens this test wants to listen for.
      *
      * @since 7.1.4
      *
-     * @return array
+     * @return array<int|string>
      */
     public function register()
     {
-        return array(\T_USE);
+        return [\T_USE];
     }
 
 
@@ -62,27 +64,27 @@ class NewUseConstFunctionSniff extends Sniff
      *
      * @since 7.1.4
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param int                   $stackPtr  The position of the current token in the
-     *                                         stack passed in $tokens.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile The file being scanned.
+     * @param int                         $stackPtr  The position of the current token in the
+     *                                               stack passed in $tokens.
      *
      * @return void
      */
     public function process(File $phpcsFile, $stackPtr)
     {
-        if ($this->supportsBelow('5.5') !== true) {
+        if (ScannedCode::shouldRunOnOrBelow('5.5') === false) {
+            return;
+        }
+
+        if (UseStatements::isImportUse($phpcsFile, $stackPtr) === false) {
             return;
         }
 
         $tokens = $phpcsFile->getTokens();
 
+        // Note: $nextNonEmpty will never be `false` as otherwise `isImportUse()` would have returned `false`.
         $nextNonEmpty = $phpcsFile->findNext(Tokens::$emptyTokens, ($stackPtr + 1), null, true);
-        if ($nextNonEmpty === false) {
-            // Live coding.
-            return;
-        }
-
-        if (isset($this->validUseNames[strtolower($tokens[$nextNonEmpty]['content'])]) === false) {
+        if (isset($this->validUseNames[\strtolower($tokens[$nextNonEmpty]['content'])]) === false) {
             // Not a `use const` or `use function` statement.
             return;
         }
@@ -90,8 +92,7 @@ class NewUseConstFunctionSniff extends Sniff
         // `use const` and `use function` have to be followed by the function/constant name.
         $functionOrConstName = $phpcsFile->findNext(Tokens::$emptyTokens, ($nextNonEmpty + 1), null, true);
         if ($functionOrConstName === false
-            // Identifies as T_AS or T_STRING, this covers both.
-            || ($tokens[$functionOrConstName]['content'] === 'as'
+            || ($tokens[$functionOrConstName]['code'] === \T_AS
             || $tokens[$functionOrConstName]['code'] === \T_COMMA)
         ) {
             // Live coding or incorrect use of reserved keyword, but that is

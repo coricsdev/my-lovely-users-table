@@ -3,15 +3,20 @@
  * PHPCompatibility, an external standard for PHP_CodeSniffer.
  *
  * @package   PHPCompatibility
- * @copyright 2012-2019 PHPCompatibility Contributors
+ * @copyright 2012-2020 PHPCompatibility Contributors
  * @license   https://opensource.org/licenses/LGPL-3.0 LGPL3
  * @link      https://github.com/PHPCompatibility/PHPCompatibility
  */
 
 namespace PHPCompatibility\Sniffs\IniDirectives;
 
-use PHPCompatibility\AbstractNewFeatureSniff;
-use PHP_CodeSniffer_File as File;
+use PHPCompatibility\AbstractFunctionCallParameterSniff;
+use PHPCompatibility\Helpers\ComplexVersionNewFeatureTrait;
+use PHPCompatibility\Helpers\ScannedCode;
+use PHP_CodeSniffer\Files\File;
+use PHPCSUtils\Utils\MessageHelper;
+use PHPCSUtils\Utils\PassedParameters;
+use PHPCSUtils\Utils\TextStrings;
 
 /**
  * Detect the use of new INI directives through `ini_set()` or `ini_get()`.
@@ -22,12 +27,39 @@ use PHP_CodeSniffer_File as File;
  * @link https://www.php.net/manual/en/ini.core.php
  *
  * @since 5.5
- * @since 7.0.7 When a new directive is used with `ini_set()`, the sniff will now throw an error
- *              instead of a warning.
- * @since 7.1.0 Now extends the `AbstractNewFeatureSniff` instead of the base `Sniff` class..
+ * @since 7.0.7  When a new directive is used with `ini_set()`, the sniff will now throw an error
+ *               instead of a warning.
+ * @since 7.1.0  Now extends the `AbstractNewFeatureSniff` instead of the base `Sniff` class..
+ * @since 10.0.0 Now extends the base `AbstractFunctionCallParameterSniff` class
+ *               and uses the `ComplexVersionNewFeatureTrait`.
  */
-class NewIniDirectivesSniff extends AbstractNewFeatureSniff
+class NewIniDirectivesSniff extends AbstractFunctionCallParameterSniff
 {
+    use ComplexVersionNewFeatureTrait;
+
+    /**
+     * List of functions which take an ini directive as parameter (always the first parameter).
+     *
+     * Key is the function name, value an array containing the 1-based parameter position
+     * and the official name of the parameter.
+     *
+     * @since 7.1.0
+     * @since 10.0.0 Moved from the base `Sniff` class to this sniff and renamed from
+     *               `$iniFunctions` to `$targetFunctions`.
+     *
+     * @var array<string, array<string, int|string>>
+     */
+    protected $targetFunctions = [
+        'ini_get' => [
+            'position' => 1,
+            'name'     => 'option',
+        ],
+        'ini_set' => [
+            'position' => 1,
+            'name'     => 'option',
+        ],
+    ];
+
     /**
      * A list of new INI directives
      *
@@ -37,819 +69,1110 @@ class NewIniDirectivesSniff extends AbstractNewFeatureSniff
      * @since 5.5
      * @since 7.0.3 Support for 'alternative' has been added.
      *
-     * @var array(string)
+     * @var array<string, array<string, bool|string>>
      */
-    protected $newIniDirectives = array(
-        'auto_globals_jit' => array(
+    protected $newIniDirectives = [
+        'auto_globals_jit' => [
             '4.4' => false,
             '5.0' => true,
-        ),
-        'com.code_page' => array(
+        ],
+        'com.code_page' => [
             '4.4' => false,
             '5.0' => true,
-        ),
-        'date.default_latitude' => array(
+        ],
+        'date.default_latitude' => [
             '4.4' => false,
             '5.0' => true,
-        ),
-        'date.default_longitude' => array(
+        ],
+        'date.default_longitude' => [
             '4.4' => false,
             '5.0' => true,
-        ),
-        'date.sunrise_zenith' => array(
+        ],
+        'date.sunrise_zenith' => [
             '4.4' => false,
             '5.0' => true,
-        ),
-        'date.sunset_zenith' => array(
+        ],
+        'date.sunset_zenith' => [
             '4.4' => false,
             '5.0' => true,
-        ),
-        'ibase.default_charset' => array(
+        ],
+        'ibase.default_charset' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'ibase',
+        ],
+        'ibase.default_db' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'ibase',
+        ],
+        'mail.force_extra_parameters' => [
             '4.4' => false,
             '5.0' => true,
-        ),
-        'ibase.default_db' => array(
+        ],
+        'mime_magic.debug' => [
             '4.4' => false,
             '5.0' => true,
-        ),
-        'mail.force_extra_parameters' => array(
+        ],
+        'mysqli.max_links' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'mysqli',
+        ],
+        'mysqli.default_port' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'mysqli',
+        ],
+        'mysqli.default_socket' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'mysqli',
+        ],
+        'mysqli.default_host' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'mysqli',
+        ],
+        'mysqli.default_user' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'mysqli',
+        ],
+        'mysqli.default_pw' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'mysqli',
+        ],
+        'mysqli.reconnect' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'mysqli',
+        ],
+        'report_zend_debug' => [
             '4.4' => false,
             '5.0' => true,
-        ),
-        'mime_magic.debug' => array(
+        ],
+        'session.hash_bits_per_character' => [
             '4.4' => false,
             '5.0' => true,
-        ),
-        'mysqli.max_links' => array(
+        ],
+        'session.hash_function' => [
             '4.4' => false,
             '5.0' => true,
-        ),
-        'mysqli.default_port' => array(
+        ],
+        'soap.wsdl_cache_dir' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'soap',
+        ],
+        'soap.wsdl_cache_enabled' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'soap',
+        ],
+        'soap.wsdl_cache_ttl' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'soap',
+        ],
+        'sqlite.assoc_case' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'sqlite',
+        ],
+        'tidy.clean_output' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'tidy',
+        ],
+        'tidy.default_config' => [
+            '4.4'       => false,
+            '5.0'       => true,
+            'extension' => 'tidy',
+        ],
+        'zend.ze1_compatibility_mode' => [
             '4.4' => false,
             '5.0' => true,
-        ),
-        'mysqli.default_socket' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
-        'mysqli.default_host' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
-        'mysqli.default_user' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
-        'mysqli.default_pw' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
-        'report_zend_debug' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
-        'session.hash_bits_per_character' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
-        'session.hash_function' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
-        'soap.wsdl_cache_dir' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
-        'soap.wsdl_cache_enabled' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
-        'soap.wsdl_cache_ttl' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
-        'sqlite.assoc_case' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
-        'tidy.clean_output' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
-        'tidy.default_config' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
-        'zend.ze1_compatibility_mode' => array(
-            '4.4' => false,
-            '5.0' => true,
-        ),
+        ],
 
-        'date.timezone' => array(
+        'date.timezone' => [
             '5.0' => false,
             '5.1' => true,
-        ),
-        'detect_unicode' => array(
+        ],
+        'detect_unicode' => [
             '5.0' => false,
             '5.1' => true,
-        ),
-        'fbsql.batchsize' => array(
+        ],
+        'fbsql.batchsize' => [
             '5.0'         => false,
             '5.1'         => true,
             'alternative' => 'fbsql.batchSize',
-        ),
-        'realpath_cache_size' => array(
+        ],
+        'realpath_cache_size' => [
             '5.0' => false,
             '5.1' => true,
-        ),
-        'realpath_cache_ttl' => array(
+        ],
+        'realpath_cache_ttl' => [
             '5.0' => false,
             '5.1' => true,
-        ),
+        ],
+        'pdo_odbc.connection_pooling' => [
+            '5.0'       => false,
+            '5.1'       => true,
+            'extension' => 'pdo',
+        ],
 
-        'mbstring.strict_detection' => array(
-            '5.1.1' => false,
-            '5.1.2' => true,
-        ),
-        'mssql.charset' => array(
-            '5.1.1' => false,
-            '5.1.2' => true,
-        ),
+        'pdo_odbc.db2_instance_name' => [
+            '5.1.0'     => false,
+            '5.1.1'     => true,
+            'extension' => 'pdo',
+        ],
 
-        'gd.jpeg_ignore_warning' => array(
-            '5.1.2' => false,
-            '5.1.3' => true,
-        ),
+        'mbstring.strict_detection' => [
+            '5.1.1'     => false,
+            '5.1.2'     => true,
+            'extension' => 'mbstring',
+        ],
+        'mssql.charset' => [
+            '5.1.1'     => false,
+            '5.1.2'     => true,
+            'extension' => 'mssql',
+        ],
+        'oci8.default_prefetch' => [
+            '5.1.1'     => false,
+            '5.1.2'     => true,
+            'extension' => 'oci8',
+        ],
+        'oci8.max_persistent' => [
+            '5.1.1'     => false,
+            '5.1.2'     => true,
+            'extension' => 'oci8',
+        ],
+        'oci8.old_oci_close_semantics' => [
+            '5.1.1'     => false,
+            '5.1.2'     => true,
+            'extension' => 'oci8',
+        ],
+        'oci8.persistent_timeout' => [
+            '5.1.1'     => false,
+            '5.1.2'     => true,
+            'extension' => 'oci8',
+        ],
+        'oci8.ping_interval' => [
+            '5.1.1'     => false,
+            '5.1.2'     => true,
+            'extension' => 'oci8',
+        ],
+        'oci8.privileged_connect' => [
+            '5.1.1'     => false,
+            '5.1.2'     => true,
+            'extension' => 'oci8',
+        ],
+        'oci8.statement_cache_size' => [
+            '5.1.1'     => false,
+            '5.1.2'     => true,
+            'extension' => 'oci8',
+        ],
 
-        'fbsql.show_timestamp_decimals' => array(
-            '5.1.4' => false,
-            '5.1.5' => true,
-        ),
-        'soap.wsdl_cache' => array(
-            '5.1.4' => false,
-            '5.1.5' => true,
-        ),
-        'soap.wsdl_cache_limit' => array(
-            '5.1.4' => false,
-            '5.1.5' => true,
-        ),
+        'gd.jpeg_ignore_warning' => [
+            '5.1.2'     => false,
+            '5.1.3'     => true,
+            'extension' => 'gd',
+        ],
 
-        'allow_url_include' => array(
-            '5.1' => false,
-            '5.2' => true,
-        ),
-        'filter.default' => array(
-            '5.1' => false,
-            '5.2' => true,
-        ),
-        'filter.default_flags' => array(
-            '5.1' => false,
-            '5.2' => true,
-        ),
-        'pcre.backtrack_limit' => array(
-            '5.1' => false,
-            '5.2' => true,
-        ),
-        'pcre.recursion_limit' => array(
-            '5.1' => false,
-            '5.2' => true,
-        ),
-        'session.cookie_httponly' => array(
-            '5.1' => false,
-            '5.2' => true,
-        ),
+        'fbsql.show_timestamp_decimals' => [
+            '5.1.4'     => false,
+            '5.1.5'     => true,
+            'extension' => 'fbsql',
+        ],
+        'soap.wsdl_cache' => [
+            '5.1.4'     => false,
+            '5.1.5'     => true,
+            'extension' => 'soap',
+        ],
+        'soap.wsdl_cache_limit' => [
+            '5.1.4'     => false,
+            '5.1.5'     => true,
+            'extension' => 'soap',
+        ],
 
-        'cgi.check_shebang_line' => array(
+        'allow_url_include' => [
+            '5.1' => false,
+            '5.2' => true,
+        ],
+        'filter.default' => [
+            '5.1'       => false,
+            '5.2'       => true,
+            'extension' => 'filter',
+        ],
+        'filter.default_flags' => [
+            '5.1'       => false,
+            '5.2'       => true,
+            'extension' => 'filter',
+        ],
+        'pcre.backtrack_limit' => [
+            '5.1' => false,
+            '5.2' => true,
+        ],
+        'pcre.recursion_limit' => [
+            '5.1' => false,
+            '5.2' => true,
+        ],
+        'session.cookie_httponly' => [
+            '5.1' => false,
+            '5.2' => true,
+        ],
+
+        'cgi.check_shebang_line' => [
             '5.2.0' => false,
             '5.2.1' => true,
-        ),
+        ],
 
-        'max_input_nesting_level' => array(
+        'max_input_nesting_level' => [
             '5.2.2' => false,
             '5.2.3' => true,
-        ),
+        ],
 
-        'mysqli.allow_local_infile' => array(
-            '5.2.3' => false,
-            '5.2.4' => true,
-        ),
+        'mysqli.allow_local_infile' => [
+            '5.2.3'     => false,
+            '5.2.4'     => true,
+            'extension' => 'mysqli',
+        ],
 
-        'max_file_uploads' => array(
+        'max_file_uploads' => [
             '5.2.11' => false,
             '5.2.12' => true,
-        ),
+        ],
 
-        'cgi.discard_path' => array(
+        'cgi.discard_path' => [
             '5.2' => false,
             '5.3' => true,
-        ),
-        'exit_on_timeout' => array(
+        ],
+        'exit_on_timeout' => [
             '5.2' => false,
             '5.3' => true,
-        ),
-        'intl.default_locale' => array(
+        ],
+        'intl.default_locale' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'intl',
+        ],
+        'intl.error_level' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'intl',
+        ],
+        'mail.add_x_header' => [
             '5.2' => false,
             '5.3' => true,
-        ),
-        'intl.error_level' => array(
+        ],
+        'mail.log' => [
             '5.2' => false,
             '5.3' => true,
-        ),
-        'mail.add_x_header' => array(
+        ],
+        'mbstring.http_output_conv_mimetype' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'mbstring',
+        ],
+        'mysqli.allow_persistent' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'mysqli',
+        ],
+        'mysqli.max_persistent' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'mysqli',
+        ],
+        'mysqlnd.collect_memory_statistics' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'mysqlnd',
+        ],
+        'mysqlnd.collect_statistics' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'mysqlnd',
+        ],
+        'mysqlnd.debug' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'mysqlnd',
+        ],
+        'mysqlnd.log_mask' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'mysqlnd',
+        ],
+        'mysqlnd.net_read_timeout' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'mysqlnd',
+        ],
+        'mysqlnd.net_cmd_buffer_size' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'mysqlnd',
+        ],
+        'mysqlnd.net_read_buffer_size' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'mysqlnd',
+        ],
+        'odbc.default_cursortype' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'odbc',
+        ],
+        'phar.readonly' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'phar',
+        ],
+        'phar.require_hash' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'phar',
+        ],
+        'phar.extract_list' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'phar',
+        ],
+        'request_order' => [
             '5.2' => false,
             '5.3' => true,
-        ),
-        'mail.log' => array(
+        ],
+        'user_ini.cache_ttl' => [
             '5.2' => false,
             '5.3' => true,
-        ),
-        'mbstring.http_output_conv_mimetype' => array(
+        ],
+        'user_ini.filename' => [
             '5.2' => false,
             '5.3' => true,
-        ),
-        'mysqli.allow_persistent' => array(
+        ],
+        'zend.enable_gc' => [
             '5.2' => false,
             '5.3' => true,
-        ),
-        'mysqli.cache_size' => array(
-            '5.2' => false,
-            '5.3' => true,
-        ),
-        'mysqli.max_persistent' => array(
-            '5.2' => false,
-            '5.3' => true,
-        ),
-        'mysqlnd.collect_memory_statistics' => array(
-            '5.2' => false,
-            '5.3' => true,
-        ),
-        'mysqlnd.collect_statistics' => array(
-            '5.2' => false,
-            '5.3' => true,
-        ),
-        'mysqlnd.debug' => array(
-            '5.2' => false,
-            '5.3' => true,
-        ),
-        'mysqlnd.net_read_buffer_size' => array(
-            '5.2' => false,
-            '5.3' => true,
-        ),
-        'odbc.default_cursortype' => array(
-            '5.2' => false,
-            '5.3' => true,
-        ),
-        'request_order' => array(
-            '5.2' => false,
-            '5.3' => true,
-        ),
-        'user_ini.cache_ttl' => array(
-            '5.2' => false,
-            '5.3' => true,
-        ),
-        'user_ini.filename' => array(
-            '5.2' => false,
-            '5.3' => true,
-        ),
-        'zend.enable_gc' => array(
-            '5.2' => false,
-            '5.3' => true,
-        ),
+        ],
+        'oci8.connection_class' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'oci8',
+        ],
+        'oci8.events' => [
+            '5.2'       => false,
+            '5.3'       => true,
+            'extension' => 'oci8',
+        ],
 
-        'curl.cainfo' => array(
-            '5.3.6' => false,
-            '5.3.7' => true,
-        ),
+        'mysqlnd.mempool_default_size' => [
+            '5.3.2'     => false,
+            '5.3.3'     => true,
+            'extension' => 'mysqlnd',
+        ],
 
-        'max_input_vars' => array(
+        'curl.cainfo' => [
+            '5.3.6'     => false,
+            '5.3.7'     => true,
+            'extension' => 'curl',
+        ],
+
+        'max_input_vars' => [
             '5.3.8' => false,
             '5.3.9' => true,
-        ),
+        ],
 
-        'sqlite3.extension_dir' => array(
-            '5.3.10' => false,
-            '5.3.11' => true,
-        ),
+        'sqlite3.extension_dir' => [
+            '5.3.10'    => false,
+            '5.3.11'    => true,
+            'extension' => 'sqlite3',
+        ],
 
-        'cli.pager' => array(
+        'cli.pager' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'cli.prompt' => array(
+        ],
+        'cli.prompt' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'cli_server.color' => array(
+        ],
+        'cli_server.color' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'enable_post_data_reading' => array(
+        ],
+        'enable_post_data_reading' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'mysqlnd.mempool_default_size' => array(
+        ],
+        'phar.cache_list' => [
+            '5.3'       => false,
+            '5.4'       => true,
+            'extension' => 'phar',
+        ],
+        'session.upload_progress.enabled' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'mysqlnd.net_cmd_buffer_size' => array(
+        ],
+        'session.upload_progress.cleanup' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'mysqlnd.net_read_timeout' => array(
+        ],
+        'session.upload_progress.name' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'phar.cache_list' => array(
+        ],
+        'session.upload_progress.freq' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'session.upload_progress.enabled' => array(
+        ],
+        'session.upload_progress.min_freq' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'session.upload_progress.cleanup' => array(
+        ],
+        'session.upload_progress.prefix' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'session.upload_progress.name' => array(
+        ],
+        'windows_show_crt_warning' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'session.upload_progress.freq' => array(
-            '5.3' => false,
-            '5.4' => true,
-        ),
-        'session.upload_progress.min_freq' => array(
-            '5.3' => false,
-            '5.4' => true,
-        ),
-        'session.upload_progress.prefix' => array(
-            '5.3' => false,
-            '5.4' => true,
-        ),
-        'windows_show_crt_warning' => array(
-            '5.3' => false,
-            '5.4' => true,
-        ),
-        'zend.detect_unicode' => array(
+        ],
+        'zend.detect_unicode' => [
             '5.3'         => false,
             '5.4'         => true,
             'alternative' => 'detect_unicode',
-        ),
-        'zend.multibyte' => array(
+        ],
+        'zend.multibyte' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'zend.script_encoding' => array(
+        ],
+        'zend.script_encoding' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'zend.signal_check' => array(
+        ],
+        'zend.signal_check' => [
             '5.3' => false,
             '5.4' => true,
-        ),
-        'mysqlnd.log_mask' => array(
-            '5.3' => false,
-            '5.4' => true,
-        ),
+        ],
 
-        'intl.use_exceptions' => array(
+        'intl.use_exceptions' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'intl',
+        ],
+        'mysqlnd.sha256_server_public_key' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'mysqlnd',
+        ],
+        'mysqlnd.trace_alloc' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'mysqlnd',
+        ],
+        'sys_temp_dir' => [
             '5.4' => false,
             '5.5' => true,
-        ),
-        'mysqlnd.sha256_server_public_key' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'mysqlnd.trace_alloc' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'sys_temp_dir' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'xsl.security_prefs' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.enable' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.enable_cli' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.memory_consumption' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.interned_strings_buffer' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.max_accelerated_files' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.max_wasted_percentage' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.use_cwd' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.validate_timestamps' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.revalidate_freq' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.revalidate_path' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.save_comments' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.load_comments' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.fast_shutdown' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.enable_file_override' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.optimization_level' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.inherited_hack' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.dups_fix' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.blacklist_filename' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.max_file_size' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.consistency_checks' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.force_restart_timeout' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.error_log' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.log_verbosity_level' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.preferred_memory_model' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.protect_memory' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.mmap_base' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.restrict_api' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.file_update_protection' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.huge_code_pages' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.lockfile_path' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
-        'opcache.opt_debug_level' => array(
-            '5.4' => false,
-            '5.5' => true,
-        ),
+        ],
+        'xsl.security_prefs' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'xsl',
+        ],
+        'opcache.enable' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.enable_cli' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.memory_consumption' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.interned_strings_buffer' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.max_accelerated_files' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.max_wasted_percentage' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.use_cwd' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.validate_timestamps' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.revalidate_freq' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.revalidate_path' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.save_comments' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.load_comments' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.fast_shutdown' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.enable_file_override' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.optimization_level' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.inherited_hack' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.dups_fix' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.blacklist_filename' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.max_file_size' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.consistency_checks' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.force_restart_timeout' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.error_log' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.log_verbosity_level' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.preferred_memory_model' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.protect_memory' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.mmap_base' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.restrict_api' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.file_update_protection' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.huge_code_pages' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.lockfile_path' => [
+            '5.4'       => false,
+            '5.5'       => true,
+            'extension' => 'opcache',
+        ],
 
-        'session.use_strict_mode' => array(
+        'session.use_strict_mode' => [
             '5.5.1' => false,
             '5.5.2' => true,
-        ),
+        ],
 
-        'mysqli.rollback_on_cached_plink' => array(
-            '5.5' => false,
-            '5.6' => true,
-        ),
+        'phpdbg.path' => [
+            '5.6.2'     => false,
+            '5.6.3'     => true,
+            'extension' => 'phpdbg',
+        ],
 
-        'assert.exception' => array(
-            '5.6' => false,
-            '7.0' => true,
-        ),
-        'pcre.jit' => array(
-            '5.6' => false,
-            '7.0' => true,
-        ),
-        'session.lazy_write' => array(
-            '5.6' => false,
-            '7.0' => true,
-        ),
-        'zend.assertions' => array(
-            '5.6' => false,
-            '7.0' => true,
-        ),
-        'opcache.file_cache' => array(
-            '5.6' => false,
-            '7.0' => true,
-        ),
-        'opcache.file_cache_only' => array(
-            '5.6' => false,
-            '7.0' => true,
-        ),
-        'opcache.file_cache_consistency_checks' => array(
-            '5.6' => false,
-            '7.0' => true,
-        ),
-        'opcache.file_cache_fallback' => array(
-            '5.6' => false,
-            '7.0' => true,
-        ), // Windows only.
+        'mysqli.rollback_on_cached_plink' => [
+            '5.5'       => false,
+            '5.6'       => true,
+            'extension' => 'mysqli',
+        ],
+        'openssl.cafile' => [
+            '5.5'       => false,
+            '5.6'       => true,
+            'extension' => 'openssl',
+        ],
+        'openssl.capath' => [
+            '5.5'       => false,
+            '5.6'       => true,
+            'extension' => 'openssl',
+        ],
+        'mysqlnd.fetch_data_copy' => [
+            '5.5'       => false,
+            '5.6'       => true,
+            'extension' => 'mysqlnd',
+        ],
 
-        'opcache.validate_permission' => array(
-            '7.0.13' => false,
-            '7.0.14' => true,
-        ),
-        'opcache.validate_root' => array(
-            '7.0.13' => false,
-            '7.0.14' => true,
-        ),
+        'assert.exception' => [
+            '5.6' => false,
+            '7.0' => true,
+        ],
+        'pcre.jit' => [
+            '5.6' => false,
+            '7.0' => true,
+        ],
+        'phpdbg.eol' => [
+            '5.6'       => false,
+            '7.0'       => true,
+            'extension' => 'phpdbg',
+        ],
+        'session.lazy_write' => [
+            '5.6' => false,
+            '7.0' => true,
+        ],
+        'zend.assertions' => [
+            '5.6' => false,
+            '7.0' => true,
+        ],
+        'opcache.file_cache' => [
+            '5.6'       => false,
+            '7.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.file_cache_only' => [
+            '5.6'       => false,
+            '7.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.file_cache_consistency_checks' => [
+            '5.6'       => false,
+            '7.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.file_cache_fallback' => [
+            '5.6'       => false,
+            '7.0'       => true,
+            'extension' => 'opcache',
+        ], // Windows only.
 
-        'hard_timeout' => array(
+        'opcache.validate_permission' => [
+            '7.0.13'    => false,
+            '7.0.14'    => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.validate_root' => [
+            '7.0.13'    => false,
+            '7.0.14'    => true,
+            'extension' => 'opcache',
+        ],
+
+        'hard_timeout' => [
             '7.0' => false,
             '7.1' => true,
-        ),
-        'session.sid_length' => array(
+        ],
+        'opcache.opt_debug_level' => [
+            '7.0'       => false,
+            '7.1'       => true,
+            'extension' => 'opcache',
+        ],
+        'session.sid_length' => [
             '7.0' => false,
             '7.1' => true,
-        ),
-        'session.sid_bits_per_character' => array(
+        ],
+        'session.sid_bits_per_character' => [
             '7.0' => false,
             '7.1' => true,
-        ),
-        'session.trans_sid_hosts' => array(
+        ],
+        'session.trans_sid_hosts' => [
             '7.0' => false,
             '7.1' => true,
-        ),
-        'session.trans_sid_tags' => array(
+        ],
+        'session.trans_sid_tags' => [
             '7.0' => false,
             '7.1' => true,
-        ),
-        'url_rewriter.hosts' => array(
+        ],
+        'url_rewriter.hosts' => [
             '7.0' => false,
             '7.1' => true,
-        ),
+        ],
 
         // Introduced in PHP 7.1.25, 7.2.13, 7.3.0.
-        'imap.enable_insecure_rsh' => array(
-            '7.1.24' => false,
-            '7.1.25' => true,
-        ),
+        'imap.enable_insecure_rsh' => [
+            '7.1.24'    => false,
+            '7.1.25'    => true,
+            'extension' => 'imap',
+        ],
 
-        'syslog.facility' => array(
-            '7.2' => false,
-            '7.3' => true,
-        ),
-        'syslog.filter' => array(
-            '7.2' => false,
-            '7.3' => true,
-        ),
-        'syslog.ident' => array(
-            '7.2' => false,
-            '7.3' => true,
-        ),
-        'session.cookie_samesite' => array(
-            '7.2' => false,
-            '7.3' => true,
-        ),
+        // Introduced in PHP 7.2.17, 7.3.4.
+        'sqlite3.defensive' => [
+            '7.2.16'    => false,
+            '7.2.17'    => true,
+            'extension' => 'sqlite3',
+        ],
 
-        'ffi.enable' => array(
+        'syslog.facility' => [
+            '7.2' => false,
+            '7.3' => true,
+        ],
+        'syslog.filter' => [
+            '7.2' => false,
+            '7.3' => true,
+        ],
+        'syslog.ident' => [
+            '7.2' => false,
+            '7.3' => true,
+        ],
+        'session.cookie_samesite' => [
+            '7.2' => false,
+            '7.3' => true,
+        ],
+
+        'ffi.enable' => [
+            '7.3'       => false,
+            '7.4'       => true,
+            'extension' => 'ffi',
+        ],
+        'ffi.preload' => [
+            '7.3'       => false,
+            '7.4'       => true,
+            'extension' => 'ffi',
+        ],
+        'mbstring.regex_retry_limit' => [
+            '7.3'       => false,
+            '7.4'       => true,
+            'extension' => 'mbstring',
+        ],
+        'opcache.cache_id' => [
+            '7.3'       => false,
+            '7.4'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.preload' => [
+            '7.3'       => false,
+            '7.4'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.preload_user' => [
+            '7.3'       => false,
+            '7.4'       => true,
+            'extension' => 'opcache',
+        ],
+        'unserialize_max_depth' => [
             '7.3' => false,
             '7.4' => true,
-        ),
-        'ffi.preload' => array(
+        ],
+        'zend.exception_ignore_args' => [
             '7.3' => false,
             '7.4' => true,
-        ),
-        'opcache.cache_id' => array(
-            '7.3' => false,
-            '7.4' => true,
-        ),
-        'opcache.preload' => array(
-            '7.3' => false,
-            '7.4' => true,
-        ),
-        'zend.exception_ignore_args' => array(
-            '7.3' => false,
-            '7.4' => true,
-        ),
-    );
+        ],
+
+        'com.dotnet_version' => [
+            '7.4' => false,
+            '8.0' => true,
+        ],
+        'pm.status_listen' => [
+            '7.4' => false,
+            '8.0' => true,
+        ],
+        'zend.exception_string_param_max_len' => [
+            '7.4' => false,
+            '8.0' => true,
+        ],
+        'opcache.jit' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_buffer_size' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_debug' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_bisect_limit' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_prof_threshold' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_hot_loop' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_hot_func' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_hot_return' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_hot_side_exit' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_blacklist_root_trace' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_blacklist_side_trace' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_max_loop_unrolls' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_max_exit_counters' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_max_root_traces' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_max_side_traces' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_max_recursive_calls' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_max_recursive_returns' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+        'opcache.jit_max_polymorphic_calls' => [
+            '7.4'       => false,
+            '8.0'       => true,
+            'extension' => 'opcache',
+        ],
+
+        'fiber.stack_size' => [
+            '8.0'       => false,
+            '8.1'       => true,
+            'extension' => 'fibers',
+        ],
+        'mysqli.local_infile_directory' => [
+            '8.0'       => false,
+            '8.1'       => true,
+            'extension' => 'mysqli',
+        ],
+        'pm.max_spawn_rate' => [
+            '8.0'       => false,
+            '8.1'       => true,
+            'extension' => 'fpm',
+        ],
+
+        'error_log_mode' => [
+            '8.1' => false,
+            '8.2' => true,
+        ],
+        'oci8.prefetch_lob_size' => [
+            '8.1'       => false,
+            '8.2'       => true,
+            'extension' => 'oci8',
+        ],
+
+        'zend.max_allowed_stack_size' => [
+            '8.2' => false,
+            '8.3' => true,
+        ],
+        'zend.reserved_stack_size' => [
+            '8.2' => false,
+            '8.3' => true,
+        ],
+        'opcache.jit_max_trace_length' => [
+            '8.2'       => false,
+            '8.3'       => true,
+            'extension' => 'opcache',
+        ],
+    ];
 
     /**
-     * Returns an array of tokens this test wants to listen for.
+     * Should the sniff bow out early for specific PHP versions ?
      *
-     * @since 5.5
+     * @since 10.0.0
      *
-     * @return array
+     * @return bool
      */
-    public function register()
+    protected function bowOutEarly()
     {
-        return array(\T_STRING);
+        return false;
     }
 
     /**
-     * Processes this test, when one of its tokens is encountered.
+     * Process the parameters of a matched function.
      *
-     * @since 5.5
+     * @since 10.0.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param int                   $stackPtr  The position of the current token in the
-     *                                         stack passed in $tokens.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile    The file being scanned.
+     * @param int                         $stackPtr     The position of the current token in the stack.
+     * @param string                      $functionName The token content (function name) which was matched.
+     * @param array                       $parameters   Array with information about the parameters.
      *
      * @return void
      */
-    public function process(File $phpcsFile, $stackPtr)
+    public function processParameters(File $phpcsFile, $stackPtr, $functionName, $parameters)
     {
-        $tokens = $phpcsFile->getTokens();
+        $functionLc = \strtolower($functionName);
+        $paramInfo  = $this->targetFunctions[$functionLc];
 
-        $ignore = array(
-            \T_DOUBLE_COLON    => true,
-            \T_OBJECT_OPERATOR => true,
-            \T_FUNCTION        => true,
-            \T_CONST           => true,
-        );
-
-        $prevToken = $phpcsFile->findPrevious(\T_WHITESPACE, ($stackPtr - 1), null, true);
-        if (isset($ignore[$tokens[$prevToken]['code']]) === true) {
-            // Not a call to a PHP function.
-            return;
-        }
-
-        $functionLc = strtolower($tokens[$stackPtr]['content']);
-        if (isset($this->iniFunctions[$functionLc]) === false) {
-            return;
-        }
-
-        $iniToken = $this->getFunctionCallParameter($phpcsFile, $stackPtr, $this->iniFunctions[$functionLc]);
+        $iniToken = PassedParameters::getParameterFromStack($parameters, $paramInfo['position'], $paramInfo['name']);
         if ($iniToken === false) {
             return;
         }
 
-        $filteredToken = $this->stripQuotes($iniToken['raw']);
+        $filteredToken = TextStrings::stripQuotes($iniToken['clean']);
         if (isset($this->newIniDirectives[$filteredToken]) === false) {
             return;
         }
 
-        $itemInfo = array(
+        $itemInfo = [
             'name'       => $filteredToken,
             'functionLc' => $functionLc,
-        );
+        ];
         $this->handleFeature($phpcsFile, $iniToken['end'], $itemInfo);
     }
 
-
     /**
-     * Get the relevant sub-array for a specific item from a multi-dimensional array.
+     * Handle the retrieval of relevant information and - if necessary - throwing of an
+     * error for a matched item.
      *
-     * @since 7.1.0
+     * @since 10.0.0
      *
-     * @param array $itemInfo Base information about the item.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile The file being scanned.
+     * @param int                         $stackPtr  The position of the relevant token in
+     *                                               the stack.
+     * @param array                       $itemInfo  Base information about the item.
      *
-     * @return array Version and other information about the item.
+     * @return void
      */
-    public function getItemArray(array $itemInfo)
+    protected function handleFeature(File $phpcsFile, $stackPtr, array $itemInfo)
     {
-        return $this->newIniDirectives[$itemInfo['name']];
+        $itemArray   = $this->newIniDirectives[$itemInfo['name']];
+        $versionInfo = $this->getVersionInfo($itemArray);
+
+        if (empty($versionInfo['not_in_version'])
+            || ScannedCode::shouldRunOnOrBelow($versionInfo['not_in_version']) === false
+        ) {
+            return;
+        }
+
+        $this->addError($phpcsFile, $stackPtr, $itemInfo, $itemArray, $versionInfo);
     }
 
 
     /**
-     * Get an array of the non-PHP-version array keys used in a sub-array.
+     * Generates the error for this item.
      *
-     * @since 7.1.0
+     * @since 10.0.0
      *
-     * @return array
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile   The file being scanned.
+     * @param int                         $stackPtr    The position of the relevant token in
+     *                                                 the stack.
+     * @param array                       $itemInfo    Base information about the item.
+     * @param array                       $itemArray   The sub-array with all the details about
+     *                                                 this item.
+     * @param string[]                    $versionInfo Array with detail (version) information
+     *                                                 relevant to the item.
+     *
+     * @return void
      */
-    protected function getNonVersionArrayKeys()
+    protected function addError(File $phpcsFile, $stackPtr, array $itemInfo, array $itemArray, array $versionInfo)
     {
-        return array('alternative');
-    }
+        // Overrule the default message template.
+        $this->msgTemplate = "INI directive '%s' is not present in PHP version %s or earlier";
 
+        $msgInfo = $this->getMessageInfo($itemInfo['name'], $itemInfo['name'], $versionInfo);
 
-    /**
-     * Retrieve the relevant detail (version) information for use in an error message.
-     *
-     * @since 7.1.0
-     *
-     * @param array $itemArray Version and other information about the item.
-     * @param array $itemInfo  Base information about the item.
-     *
-     * @return array
-     */
-    public function getErrorInfo(array $itemArray, array $itemInfo)
-    {
-        $errorInfo                = parent::getErrorInfo($itemArray, $itemInfo);
-        $errorInfo['alternative'] = '';
+        $message = $msgInfo['message'];
+        $data    = $msgInfo['data'];
 
         if (isset($itemArray['alternative']) === true) {
-            $errorInfo['alternative'] = $itemArray['alternative'];
+            $message .= ". This directive was previously called '%s'.";
+            $data[]   = $itemArray['alternative'];
         }
 
-        // Lower error level to warning if the function used was ini_get.
-        if ($errorInfo['error'] === true && $itemInfo['functionLc'] === 'ini_get') {
-            $errorInfo['error'] = false;
+        $isError = true;
+        // Lower error level to warning if the function called was `ini_get()`.
+        if ($itemInfo['functionLc'] === 'ini_get') {
+            $isError = false;
         }
 
-        return $errorInfo;
-    }
-
-
-    /**
-     * Get the error message template for this sniff.
-     *
-     * @since 7.1.0
-     *
-     * @return string
-     */
-    protected function getErrorMsgTemplate()
-    {
-        return "INI directive '%s' is not present in PHP version %s or earlier";
-    }
-
-
-    /**
-     * Allow for concrete child classes to filter the error message before it's passed to PHPCS.
-     *
-     * @since 7.1.0
-     *
-     * @param string $error     The error message which was created.
-     * @param array  $itemInfo  Base information about the item this error message applies to.
-     * @param array  $errorInfo Detail information about an item this error message applies to.
-     *
-     * @return string
-     */
-    protected function filterErrorMsg($error, array $itemInfo, array $errorInfo)
-    {
-        if ($errorInfo['alternative'] !== '') {
-            $error .= ". This directive was previously called '%s'.";
-        }
-
-        return $error;
-    }
-
-
-    /**
-     * Allow for concrete child classes to filter the error data before it's passed to PHPCS.
-     *
-     * @since 7.1.0
-     *
-     * @param array $data      The error data array which was created.
-     * @param array $itemInfo  Base information about the item this error message applies to.
-     * @param array $errorInfo Detail information about an item this error message applies to.
-     *
-     * @return array
-     */
-    protected function filterErrorData(array $data, array $itemInfo, array $errorInfo)
-    {
-        if ($errorInfo['alternative'] !== '') {
-            $data[] = $errorInfo['alternative'];
-        }
-
-        return $data;
+        MessageHelper::addMessage($phpcsFile, $message, $stackPtr, $isError, $msgInfo['errorcode'], $data);
     }
 }

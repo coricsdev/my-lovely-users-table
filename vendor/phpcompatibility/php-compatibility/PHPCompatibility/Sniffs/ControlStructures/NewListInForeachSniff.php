@@ -3,15 +3,16 @@
  * PHPCompatibility, an external standard for PHP_CodeSniffer.
  *
  * @package   PHPCompatibility
- * @copyright 2012-2019 PHPCompatibility Contributors
+ * @copyright 2012-2020 PHPCompatibility Contributors
  * @license   https://opensource.org/licenses/LGPL-3.0 LGPL3
  * @link      https://github.com/PHPCompatibility/PHPCompatibility
  */
 
 namespace PHPCompatibility\Sniffs\ControlStructures;
 
+use PHPCompatibility\Helpers\ScannedCode;
 use PHPCompatibility\Sniff;
-use PHP_CodeSniffer_File as File;
+use PHP_CodeSniffer\Files\File;
 
 /**
  * Detect unpacking nested arrays with `list()` in a `foreach()` as available since PHP 5.5.
@@ -32,11 +33,11 @@ class NewListInForeachSniff extends Sniff
      *
      * @since 9.0.0
      *
-     * @return array
+     * @return array<int|string>
      */
     public function register()
     {
-        return array(\T_FOREACH);
+        return [\T_FOREACH];
     }
 
     /**
@@ -44,15 +45,15 @@ class NewListInForeachSniff extends Sniff
      *
      * @since 9.0.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param int                   $stackPtr  The position of the current token in the
-     *                                         stack passed in $tokens.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile The file being scanned.
+     * @param int                         $stackPtr  The position of the current token in the
+     *                                               stack passed in $tokens.
      *
      * @return void
      */
     public function process(File $phpcsFile, $stackPtr)
     {
-        if ($this->supportsBelow('5.4') === false) {
+        if (ScannedCode::shouldRunOnOrBelow('5.4') === false) {
             return;
         }
 
@@ -70,10 +71,17 @@ class NewListInForeachSniff extends Sniff
             return;
         }
 
-        $hasList = $phpcsFile->findNext(array(\T_LIST, \T_OPEN_SHORT_ARRAY), ($asToken + 1), $closer);
+        $hasList = $phpcsFile->findNext([\T_LIST, \T_OPEN_SHORT_ARRAY], ($asToken + 1), $closer);
         if ($hasList === false) {
             return;
         }
+
+        /*
+         * @internal No need to check for short array vs short list as if this token is found after the `as`
+         * in a `foreach`, it will always be a short list.
+         * Also not affected by any known tokenizer bugs which would tokenize the open bracket as
+         * `T_OPEN_SQUARE_BRACKET`.
+         */
 
         $phpcsFile->addError(
             'Unpacking nested arrays with list() in a foreach is not supported in PHP 5.4 or earlier.',

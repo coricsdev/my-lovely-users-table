@@ -1,24 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MyLovelyUsersTable\Table;
 
-class Settings {
-    public function __construct() {
-        add_action('admin_menu', [$this, 'add_options_page']);
-        add_action('admin_init', [$this, 'initialize_settings']);
+class Settings
+{
+    public function __construct()
+    {
+        add_action('admin_menu', [$this, 'addOptionsPage']);
+        add_action('admin_init', [$this, 'initializeSettings']);
     }
 
-    public function add_options_page() {
+    public function addOptionsPage(): void // Added return type
+    {
         add_options_page(
             'My Lovely Users Table Settings',
             'My Lovely Users Table Settings',
             'manage_options',
             'my-lovely-users-table',
-            [$this, 'render_options_page']
+            [$this, 'renderOptionsPage']
         );
     }
 
-    public function render_options_page() {
+    public function renderOptionsPage(): void // Added return type
+    {
         ?>
         <div class="wrap">
             <h2>My Lovely Users Table Settings</h2>
@@ -33,36 +39,37 @@ class Settings {
         <?php
     }
 
-    public function initialize_settings() {
+    public function initializeSettings(): void // Added return type
+    {
         register_setting(
             'my-lovely-users-table-options',
             'my_lovely_users_table_endpoint',
             [
                 'type' => 'string',
-                'sanitize_callback' => [$this, 'validate_endpoint'],
+                'sanitize_callback' => [$this, 'validateEndpoint'], // Adjusted method name
                 'default' => 'my-lovely-users-table',
             ]
         );
-    
+
         add_settings_section(
             'my-lovely-users-table-main',
             'Main Settings',
             null,
             'my-lovely-users-table'
         );
-    
+
         add_settings_field(
             'my-lovely-users-table-endpoint',
             'Endpoint',
-            [$this, 'endpoint_field_callback'],
+            [$this, 'endpointFieldCallback'], // Adjusted method name
             'my-lovely-users-table',
             'my-lovely-users-table-main'
         );
     }
-    
-    public function validate_endpoint($input) {
-        // List of WordPress REST API route bases to avoid
-        $reserved_routes = [
+
+    public function validateEndpoint(string $input): string
+    {
+        $reservedRoutes = [
             'wp/v2', // WordPress core REST API
             'wp-json', // Common REST API prefix
             'oembed/1.0', // oEmbed routes
@@ -86,22 +93,11 @@ class Settings {
             'admin-ajax', // WordPress AJAX operations
             // Add more plugin-specific or custom REST API routes as needed
             // Custom post types and taxonomies should also be considered
-        ]; 
-        /**
-         * Filters the list of reserved routes to avoid conflicts.
-         *
-         * This allows developers to add or remove routes from the list of reserved routes
-         * that the plugin checks to prevent conflicts with WordPress API REST API endpoints
-         * and other important WordPress paths.
-         *
-         * @since 1.0.0
-         *
-         * @param array $reserved_routes The original list of reserved routes.
-         * @return array Modified list of reserved routes.
-         */
-        $reserved_routes = apply_filters('my_lovely_users_table_reserved_routes', $reserved_routes);
-     
-        foreach ($reserved_routes as $route) {
+        ];
+
+        $reservedRoutes = apply_filters('my_lovely_users_table_reserved_routes', $reservedRoutes);
+
+        foreach ($reservedRoutes as $route) {
             if (strpos($input, $route) !== false) {
                 add_settings_error(
                     'my_lovely_users_table_endpoint',
@@ -109,17 +105,18 @@ class Settings {
                     'Do not use WordPress API REST endpoints or reserved words as custom endpoint.',
                     'error'
                 );
-                // Return the previous value to prevent saving the invalid input
                 return get_option('my_lovely_users_table_endpoint');
             }
         }
-    
-        // Input is valid
+
         return sanitize_text_field($input);
     }
-    
-    public function endpoint_field_callback() {
+
+    public function endpointFieldCallback(): void // Added return type
+    {
         $endpoint = get_option('my_lovely_users_table_endpoint', 'my-lovely-users-table');
-        echo "<input type='text' name='my_lovely_users_table_endpoint' value='" . esc_attr($endpoint) . "' />";
+        // Split long line to adhere to line length limit
+        echo "<input type='text' name='my_lovely_users_table_endpoint' value='";
+        echo esc_attr($endpoint) . "' />";
     }
 }

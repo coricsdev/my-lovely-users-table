@@ -3,16 +3,18 @@
  * PHPCompatibility, an external standard for PHP_CodeSniffer.
  *
  * @package   PHPCompatibility
- * @copyright 2012-2019 PHPCompatibility Contributors
+ * @copyright 2012-2020 PHPCompatibility Contributors
  * @license   https://opensource.org/licenses/LGPL-3.0 LGPL3
  * @link      https://github.com/PHPCompatibility/PHPCompatibility
  */
 
 namespace PHPCompatibility\Sniffs\ControlStructures;
 
+use PHPCompatibility\Helpers\ScannedCode;
 use PHPCompatibility\Sniff;
-use PHP_CodeSniffer_File as File;
-use PHP_CodeSniffer_Tokens as Tokens;
+use PHP_CodeSniffer\Files\File;
+use PHP_CodeSniffer\Util\Tokens;
+use PHPCSUtils\Utils\Numbers;
 
 /**
  * Detects using 0 and variable numeric arguments on `break` and `continue` statements.
@@ -23,7 +25,7 @@ use PHP_CodeSniffer_Tokens as Tokens;
  *
  * PHP version 5.4
  *
- * @link https://www.php.net/manual/en/migration54.incompatible.php
+ * @link https://php-legacy-docs.zend.com/manual/php5/en/migration54.incompatible
  * @link https://www.php.net/manual/en/control-structures.break.php
  * @link https://www.php.net/manual/en/control-structures.continue.php
  *
@@ -32,6 +34,7 @@ use PHP_CodeSniffer_Tokens as Tokens;
  */
 class ForbiddenBreakContinueVariableArgumentsSniff extends Sniff
 {
+
     /**
      * Error types this sniff handles for forbidden break/continue arguments.
      *
@@ -40,23 +43,36 @@ class ForbiddenBreakContinueVariableArgumentsSniff extends Sniff
      * @since 7.0.5
      * @since 7.1.0 Changed from class constants to property.
      *
-     * @var array
+     * @var array<string, string>
      */
-    private $errorTypes = array(
+    private $errorTypes = [
         'variableArgument' => 'a variable argument',
         'zeroArgument'     => '0 as an argument',
-    );
+    ];
+
+    /**
+     * Tokens indicating this is definitely a variable argument.
+     *
+     * @since 10.0.0
+     *
+     * @var array<int|string, int|string>
+     */
+    private $varArgTokens = [
+        \T_VARIABLE => \T_VARIABLE,
+        \T_CLOSURE  => \T_CLOSURE,
+        \T_FN       => \T_FN,
+    ];
 
     /**
      * Returns an array of tokens this test wants to listen for.
      *
      * @since 5.5
      *
-     * @return array
+     * @return array<int|string>
      */
     public function register()
     {
-        return array(\T_BREAK, \T_CONTINUE);
+        return [\T_BREAK, \T_CONTINUE];
     }
 
     /**
@@ -64,23 +80,23 @@ class ForbiddenBreakContinueVariableArgumentsSniff extends Sniff
      *
      * @since 5.5
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param int                   $stackPtr  The position of the current token in the
-     *                                         stack passed in $tokens.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile The file being scanned.
+     * @param int                         $stackPtr  The position of the current token in the
+     *                                               stack passed in $tokens.
      *
      * @return void
      */
     public function process(File $phpcsFile, $stackPtr)
     {
-        if ($this->supportsAbove('5.4') === false) {
+        if (ScannedCode::shouldRunOnOrAbove('5.4') === false) {
             return;
         }
 
         $tokens             = $phpcsFile->getTokens();
-        $nextSemicolonToken = $phpcsFile->findNext(array(\T_SEMICOLON, \T_CLOSE_TAG), ($stackPtr), null, false);
+        $nextSemicolonToken = $phpcsFile->findNext([\T_SEMICOLON, \T_CLOSE_TAG], ($stackPtr), null, false);
         $errorType          = '';
         for ($curToken = $stackPtr + 1; $curToken < $nextSemicolonToken; $curToken++) {
-            if ($tokens[$curToken]['type'] === 'T_STRING') {
+            if ($tokens[$curToken]['code'] === \T_STRING) {
                 // If the next non-whitespace token after the string
                 // is an opening parenthesis then it's a function call.
                 $openBracket = $phpcsFile->findNext(Tokens::$emptyTokens, $curToken + 1, null, true);
@@ -88,21 +104,26 @@ class ForbiddenBreakContinueVariableArgumentsSniff extends Sniff
                     $errorType = 'variableArgument';
                     break;
                 }
+            }
 
-            } elseif (\in_array($tokens[$curToken]['type'], array('T_VARIABLE', 'T_FUNCTION', 'T_CLOSURE'), true)) {
+            if (isset($this->varArgTokens[$tokens[$curToken]['code']]) === true) {
                 $errorType = 'variableArgument';
                 break;
+            }
 
-            } elseif ($tokens[$curToken]['type'] === 'T_LNUMBER' && $tokens[$curToken]['content'] === '0') {
-                $errorType = 'zeroArgument';
-                break;
+            if ($tokens[$curToken]['code'] === \T_LNUMBER) {
+                $numberInfo = Numbers::getCompleteNumber($phpcsFile, $curToken);
+                if ($numberInfo['decimal'] === '0') {
+                    $errorType = 'zeroArgument';
+                    break;
+                }
             }
         }
 
         if ($errorType !== '') {
             $error     = 'Using %s on break or continue is forbidden since PHP 5.4';
             $errorCode = $errorType . 'Found';
-            $data      = array($this->errorTypes[$errorType]);
+            $data      = [$this->errorTypes[$errorType]];
 
             $phpcsFile->addError($error, $stackPtr, $errorCode, $data);
         }

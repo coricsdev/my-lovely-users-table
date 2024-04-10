@@ -3,7 +3,7 @@
         'name' => 'coricsdev/my-lovely-users-table',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => '7b21343f43bec878b6e98e2b6ca2f4f78d58a213',
+        'reference' => '6b5deb0e4faeb40d7fe44f7a0405176b58ac05a3',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -22,7 +22,7 @@
         'coricsdev/my-lovely-users-table' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => '7b21343f43bec878b6e98e2b6ca2f4f78d58a213',
+            'reference' => '6b5deb0e4faeb40d7fe44f7a0405176b58ac05a3',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -38,23 +38,23 @@
             'dev_requirement' => true,
         ),
         'inpsyde/php-coding-standards' => array(
-            'pretty_version' => 'dev-version/2',
-            'version' => 'dev-version/2',
-            'reference' => '236ee3453b4722f9170a5afd40db6fd9f7bd60bc',
+            'pretty_version' => '2.0.0-beta.4',
+            'version' => '2.0.0.0-beta4',
+            'reference' => '6d87e516fd9f10ba1ea37e76d3381da94d1396bd',
             'type' => 'phpcodesniffer-standard',
             'install_path' => __DIR__ . '/../inpsyde/php-coding-standards',
-            'aliases' => array(
-                0 => '2.x-dev',
-            ),
+            'aliases' => array(),
             'dev_requirement' => true,
         ),
         'phpcompatibility/php-compatibility' => array(
-            'pretty_version' => '9.3.5',
-            'version' => '9.3.5.0',
-            'reference' => '9fb324479acf6f39452e0655d2429cc0d3914243',
+            'pretty_version' => 'dev-develop',
+            'version' => 'dev-develop',
+            'reference' => 'a988e5b959ef71b59038af725ce44516c4b587db',
             'type' => 'phpcodesniffer-standard',
             'install_path' => __DIR__ . '/../phpcompatibility/php-compatibility',
-            'aliases' => array(),
+            'aliases' => array(
+                0 => '10.x-dev',
+            ),
             'dev_requirement' => true,
         ),
         'phpcsstandards/phpcsextra' => array(
@@ -110,6 +110,12 @@
             'install_path' => __DIR__ . '/../squizlabs/php_codesniffer',
             'aliases' => array(),
             'dev_requirement' => true,
+        ),
+        'wimg/php-compatibility' => array(
+            'dev_requirement' => true,
+            'replaced' => array(
+                0 => '*',
+            ),
         ),
         'wp-coding-standards/wpcs' => array(
             'pretty_version' => '3.1.0',

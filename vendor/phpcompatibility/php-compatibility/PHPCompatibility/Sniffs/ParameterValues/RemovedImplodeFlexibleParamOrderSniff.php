@@ -3,7 +3,7 @@
  * PHPCompatibility, an external standard for PHP_CodeSniffer.
  *
  * @package   PHPCompatibility
- * @copyright 2012-2019 PHPCompatibility Contributors
+ * @copyright 2012-2020 PHPCompatibility Contributors
  * @license   https://opensource.org/licenses/LGPL-3.0 LGPL3
  * @link      https://github.com/PHPCompatibility/PHPCompatibility
  */
@@ -11,14 +11,19 @@
 namespace PHPCompatibility\Sniffs\ParameterValues;
 
 use PHPCompatibility\AbstractFunctionCallParameterSniff;
-use PHP_CodeSniffer_File as File;
-use PHP_CodeSniffer_Tokens as Tokens;
+use PHPCompatibility\Helpers\ScannedCode;
+use PHP_CodeSniffer\Files\File;
+use PHP_CodeSniffer\Util\Tokens;
+use PHPCSUtils\BackCompat\BCTokens;
+use PHPCSUtils\Tokens\Collections;
+use PHPCSUtils\Utils\MessageHelper;
 
 /**
  * Passing the `$glue` and `$pieces` parameters to `implode()` in reverse order has
- * been deprecated in PHP 7.4.
+ * been deprecated in PHP 7.4 and removed in PHP 8.0.
  *
  * PHP version 7.4
+ * PHP version 8.0
  *
  * @link https://www.php.net/manual/en/migration74.deprecated.php#migration74.deprecated.core.implode-reverse-parameters
  * @link https://wiki.php.net/rfc/deprecations_php_7_4#implode_parameter_order_mix
@@ -34,24 +39,24 @@ class RemovedImplodeFlexibleParamOrderSniff extends AbstractFunctionCallParamete
      *
      * @since 9.3.0
      *
-     * @var array
+     * @var array<string, true>
      */
-    protected $targetFunctions = array(
+    protected $targetFunctions = [
         'implode' => true,
         'join'    => true,
-    );
+    ];
 
     /**
      * List of PHP native constants which should be recognized as text strings.
      *
      * @since 9.3.0
      *
-     * @var array
+     * @var array<string, true>
      */
-    private $constantStrings = array(
+    private $constantStrings = [
         'DIRECTORY_SEPARATOR' => true,
         'PHP_EOL'             => true,
-    );
+    ];
 
     /**
      * List of PHP native functions which should be recognized as returning an array.
@@ -60,22 +65,22 @@ class RemovedImplodeFlexibleParamOrderSniff extends AbstractFunctionCallParamete
      *
      * @since 9.3.0
      *
-     * @var array
+     * @var array<string, true>
      */
-    private $arrayFunctions = array(
+    private $arrayFunctions = [
         'compact' => true,
         'explode' => true,
         'range'   => true,
-    );
+    ];
 
     /**
      * List of PHP native array functions which should *not* be recognized as returning an array.
      *
      * @since 9.3.0
      *
-     * @var array
+     * @var array<string, true>
      */
-    private $arrayFunctionExceptions = array(
+    private $arrayFunctionExceptions = [
         'array_key_exists'     => true,
         'array_key_first'      => true,
         'array_key_last'       => true,
@@ -89,7 +94,7 @@ class RemovedImplodeFlexibleParamOrderSniff extends AbstractFunctionCallParamete
         'array_unshift'        => true,
         'array_walk_recursive' => true,
         'array_walk'           => true,
-    );
+    ];
 
 
     /**
@@ -101,7 +106,7 @@ class RemovedImplodeFlexibleParamOrderSniff extends AbstractFunctionCallParamete
      */
     protected function bowOutEarly()
     {
-        return ($this->supportsAbove('7.4') === false);
+        return (ScannedCode::shouldRunOnOrAbove('7.4') === false);
     }
 
 
@@ -110,10 +115,10 @@ class RemovedImplodeFlexibleParamOrderSniff extends AbstractFunctionCallParamete
      *
      * @since 9.3.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile    The file being scanned.
-     * @param int                   $stackPtr     The position of the current token in the stack.
-     * @param string                $functionName The token content (function name) which was matched.
-     * @param array                 $parameters   Array with information about the parameters.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile    The file being scanned.
+     * @param int                         $stackPtr     The position of the current token in the stack.
+     * @param string                      $functionName The token content (function name) which was matched.
+     * @param array                       $parameters   Array with information about the parameters.
      *
      * @return int|void Integer stack pointer to skip forward or void to continue
      *                  normal file processing.
@@ -151,7 +156,7 @@ class RemovedImplodeFlexibleParamOrderSniff extends AbstractFunctionCallParamete
         $hasTernary = $phpcsFile->findNext(\T_INLINE_THEN, $start, $end);
         if ($hasTernary !== false
             && isset($tokens[$start]['nested_parenthesis'], $tokens[$hasTernary]['nested_parenthesis'])
-            && count($tokens[$start]['nested_parenthesis']) === count($tokens[$hasTernary]['nested_parenthesis'])
+            && \count($tokens[$start]['nested_parenthesis']) === \count($tokens[$hasTernary]['nested_parenthesis'])
         ) {
             $start = ($hasTernary + 1);
         }
@@ -189,9 +194,9 @@ class RemovedImplodeFlexibleParamOrderSniff extends AbstractFunctionCallParamete
                     continue;
                 }
 
-                $nameLc = strtolower($tokens[$i]['content']);
+                $nameLc = \strtolower($tokens[$i]['content']);
                 if (isset($this->arrayFunctions[$nameLc]) === false
-                    && (strpos($nameLc, 'array_') !== 0
+                    && (\strpos($nameLc, 'array_') !== 0
                     || isset($this->arrayFunctionExceptions[$nameLc]) === true)
                 ) {
                     continue;
@@ -199,9 +204,7 @@ class RemovedImplodeFlexibleParamOrderSniff extends AbstractFunctionCallParamete
 
                 // Now make sure it's the PHP native function being called.
                 $prevNonEmpty = $phpcsFile->findPrevious(Tokens::$emptyTokens, ($i - 1), $start, true);
-                if ($tokens[$prevNonEmpty]['code'] === \T_DOUBLE_COLON
-                    || $tokens[$prevNonEmpty]['code'] === \T_OBJECT_OPERATOR
-                ) {
+                if (isset(Collections::objectOperators()[$tokens[$prevNonEmpty]['code']]) === true) {
                     // Method call, not a call to the PHP native function.
                     continue;
                 }
@@ -247,7 +250,7 @@ class RemovedImplodeFlexibleParamOrderSniff extends AbstractFunctionCallParamete
         $hasTernary = $phpcsFile->findNext(\T_INLINE_THEN, $start, $end);
         if ($hasTernary !== false
             && isset($tokens[$start]['nested_parenthesis'], $tokens[$hasTernary]['nested_parenthesis'])
-            && count($tokens[$start]['nested_parenthesis']) === count($tokens[$hasTernary]['nested_parenthesis'])
+            && \count($tokens[$start]['nested_parenthesis']) === \count($tokens[$hasTernary]['nested_parenthesis'])
         ) {
             $start = ($hasTernary + 1);
         }
@@ -276,11 +279,7 @@ class RemovedImplodeFlexibleParamOrderSniff extends AbstractFunctionCallParamete
                 return;
             }
 
-            if ($tokenCode === \T_CONSTANT_ENCAPSED_STRING
-                || $tokenCode === \T_DOUBLE_QUOTED_STRING
-                || $tokenCode === \T_HEREDOC
-                || $tokenCode === \T_NOWDOC
-            ) {
+            if (isset(BCTokens::textStringTokens()[$tokenCode]) === true) {
                 $this->throwNotice($phpcsFile, $stackPtr, $functionName);
                 return;
             }
@@ -293,9 +292,9 @@ class RemovedImplodeFlexibleParamOrderSniff extends AbstractFunctionCallParamete
      *
      * @since 9.3.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile    The file being scanned.
-     * @param int                   $stackPtr     The position of the current token in the stack.
-     * @param string                $functionName The token content (function name) which was matched.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile    The file being scanned.
+     * @param int                         $stackPtr     The position of the current token in the stack.
+     * @param string                      $functionName The token content (function name) which was matched.
      *
      * @return void
      */
@@ -304,20 +303,16 @@ class RemovedImplodeFlexibleParamOrderSniff extends AbstractFunctionCallParamete
         $message   = 'Passing the $glue and $pieces parameters in reverse order to %s has been deprecated since PHP 7.4';
         $isError   = false;
         $errorCode = 'Deprecated';
-        $data      = array($functionName);
+        $data      = [$functionName];
 
-        /*
-        Support for the deprecated behaviour is expected to be removed in PHP 8.0.
-        Once this has been implemented, this section should be uncommented.
-        if ($this->supportsAbove('8.0') === true) {
+        if (ScannedCode::shouldRunOnOrAbove('8.0') === true) {
             $message  .= ' and is removed since PHP 8.0';
             $isError   = true;
             $errorCode = 'Removed';
         }
-        */
 
         $message .= '; $glue should be the first parameter and $pieces the second';
 
-        $this->addMessage($phpcsFile, $message, $stackPtr, $isError, $errorCode, $data);
+        MessageHelper::addMessage($phpcsFile, $message, $stackPtr, $isError, $errorCode, $data);
     }
 }

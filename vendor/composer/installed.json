@@ -140,17 +140,17 @@
         },
         {
             "name": "inpsyde/php-coding-standards",
-            "version": "dev-version/2",
-            "version_normalized": "dev-version/2",
+            "version": "2.0.0-beta.4",
+            "version_normalized": "2.0.0.0-beta4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/inpsyde/php-coding-standards.git",
-                "reference": "236ee3453b4722f9170a5afd40db6fd9f7bd60bc"
+                "reference": "6d87e516fd9f10ba1ea37e76d3381da94d1396bd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/inpsyde/php-coding-standards/zipball/236ee3453b4722f9170a5afd40db6fd9f7bd60bc",
-                "reference": "236ee3453b4722f9170a5afd40db6fd9f7bd60bc",
+                "url": "https://api.github.com/repos/inpsyde/php-coding-standards/zipball/6d87e516fd9f10ba1ea37e76d3381da94d1396bd",
+                "reference": "6d87e516fd9f10ba1ea37e76d3381da94d1396bd",
                 "shasum": ""
             },
             "require": {
@@ -166,8 +166,7 @@
                 "phpunit/phpunit": "^9.6.11",
                 "vimeo/psalm": "^5.15.0"
             },
-            "time": "2024-04-10T14:10:31+00:00",
-            "default-branch": true,
+            "time": "2024-03-13T18:29:49+00:00",
             "type": "phpcodesniffer-standard",
             "extra": {
                 "branch-alias": {
@@ -187,20 +186,19 @@
             ],
             "authors": [
                 {
-                    "name": "Syde GmbH",
-                    "email": "hello@syde.com",
-                    "homepage": "https://syde.com",
+                    "name": "Inpsyde GmbH",
+                    "email": "hello@inpsyde.com",
+                    "homepage": "https://inpsyde.com",
                     "role": "Company"
                 }
             ],
-            "description": "PHP 7.4+ coding standards for Syde WordPress projects.",
+            "description": "PHP 7+ coding standards for Inpsyde WordPress projects.",
             "keywords": [
                 "Code style",
                 "Coding Style",
                 "Inpsyde",
                 "PHP standards",
                 "PSR-2",
-                "Syde",
                 "WordPress standards",
                 "code standards",
                 "coding standards",
@@ -213,41 +211,53 @@
             ],
             "support": {
                 "issues": "https://github.com/inpsyde/php-coding-standards/issues",
-                "source": "https://github.com/inpsyde/php-coding-standards/tree/development"
+                "source": "https://github.com/inpsyde/php-coding-standards/tree/2.0.0-beta.4"
             },
             "install-path": "../inpsyde/php-coding-standards"
         },
         {
             "name": "phpcompatibility/php-compatibility",
-            "version": "9.3.5",
-            "version_normalized": "9.3.5.0",
+            "version": "dev-develop",
+            "version_normalized": "dev-develop",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHPCompatibility/PHPCompatibility.git",
-                "reference": "9fb324479acf6f39452e0655d2429cc0d3914243"
+                "reference": "a988e5b959ef71b59038af725ce44516c4b587db"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHPCompatibility/PHPCompatibility/zipball/9fb324479acf6f39452e0655d2429cc0d3914243",
-                "reference": "9fb324479acf6f39452e0655d2429cc0d3914243",
+                "url": "https://api.github.com/repos/PHPCompatibility/PHPCompatibility/zipball/a988e5b959ef71b59038af725ce44516c4b587db",
+                "reference": "a988e5b959ef71b59038af725ce44516c4b587db",
                 "shasum": ""
             },
             "require": {
-                "php": ">=5.3",
-                "squizlabs/php_codesniffer": "^2.3 || ^3.0.2"
+                "php": ">=5.4",
+                "phpcsstandards/phpcsutils": "^1.0.9",
+                "squizlabs/php_codesniffer": "^3.9.0"
             },
-            "conflict": {
-                "squizlabs/php_codesniffer": "2.6.2"
+            "replace": {
+                "wimg/php-compatibility": "*"
             },
             "require-dev": {
-                "phpunit/phpunit": "~4.5 || ^5.0 || ^6.0 || ^7.0"
+                "php-parallel-lint/php-console-highlighter": "^1.0.0",
+                "php-parallel-lint/php-parallel-lint": "^1.3.2",
+                "phpcsstandards/phpcsdevcs": "^1.1.3",
+                "phpcsstandards/phpcsdevtools": "^1.2.0",
+                "phpunit/phpunit": "^4.8.36 || ^5.7.21 || ^6.0 || ^7.0 || ^8.0 || ^9.3.4 || ^10.1.0",
+                "yoast/phpunit-polyfills": "^1.0.5 || ^2.0.0"
             },
             "suggest": {
-                "dealerdirect/phpcodesniffer-composer-installer": "^0.5 || This Composer plugin will sort out the PHPCS 'installed_paths' automatically.",
                 "roave/security-advisories": "dev-master || Helps prevent installing dependencies with known security issues."
             },
-            "time": "2019-12-27T09:44:58+00:00",
+            "time": "2024-04-08T09:51:59+00:00",
+            "default-branch": true,
             "type": "phpcodesniffer-standard",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "9.x-dev",
+                    "dev-develop": "10.x-dev"
+                }
+            },
             "installation-source": "dist",
             "notification-url": "https://packagist.org/downloads/",
             "license": [
@@ -274,12 +284,28 @@
             "keywords": [
                 "compatibility",
                 "phpcs",
-                "standards"
+                "standards",
+                "static analysis"
             ],
             "support": {
                 "issues": "https://github.com/PHPCompatibility/PHPCompatibility/issues",
+                "security": "https://github.com/PHPCompatibility/PHPCompatibility/security/policy",
                 "source": "https://github.com/PHPCompatibility/PHPCompatibility"
             },
+            "funding": [
+                {
+                    "url": "https://github.com/PHPCompatibility",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/jrfnl",
+                    "type": "github"
+                },
+                {
+                    "url": "https://opencollective.com/php_codesniffer",
+                    "type": "open_collective"
+                }
+            ],
             "install-path": "../phpcompatibility/php-compatibility"
         },
         {

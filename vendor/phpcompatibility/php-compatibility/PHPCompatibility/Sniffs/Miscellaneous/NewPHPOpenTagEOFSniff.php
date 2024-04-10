@@ -3,15 +3,16 @@
  * PHPCompatibility, an external standard for PHP_CodeSniffer.
  *
  * @package   PHPCompatibility
- * @copyright 2012-2019 PHPCompatibility Contributors
+ * @copyright 2012-2020 PHPCompatibility Contributors
  * @license   https://opensource.org/licenses/LGPL-3.0 LGPL3
  * @link      https://github.com/PHPCompatibility/PHPCompatibility
  */
 
 namespace PHPCompatibility\Sniffs\Miscellaneous;
 
+use PHPCompatibility\Helpers\ScannedCode;
 use PHPCompatibility\Sniff;
-use PHP_CodeSniffer_File as File;
+use PHP_CodeSniffer\Files\File;
 
 /**
  * PHP 7.4 now supports stand-alone PHP tags at the end of a file (without new line).
@@ -20,11 +21,6 @@ use PHP_CodeSniffer_File as File;
  * > interpreted as an opening PHP tag. Previously it was interpreted either as
  * > `<? php` and resulted in a syntax error (with short_open_tag=1) or was
  * > interpreted as a literal `<?php` string (with short_open_tag=0).
- *
- * {@internal Due to an issue with the Tokenizer, this sniff will not work correctly
- *            on PHP 5.3 in combination with PHPCS < 2.6.0 when short_open_tag is `On`.
- *            As this is causing "Undefined offset" notices, there is nothing we can
- *            do to work-around this.}
  *
  * PHP version 7.4
  *
@@ -51,22 +47,22 @@ class NewPHPOpenTagEOFSniff extends Sniff
      *
      * @since 9.3.0
      *
-     * @return array
+     * @return array<int|string>
      */
     public function register()
     {
-        $targets = array(
+        $targets = [
             \T_OPEN_TAG_WITH_ECHO,
-        );
+        ];
 
-        $this->shortOpenTags = (bool) ini_get('short_open_tag');
+        $this->shortOpenTags = (bool) \ini_get('short_open_tag');
         if ($this->shortOpenTags === false) {
             $targets[] = \T_INLINE_HTML;
         } else {
             $targets[] = \T_STRING;
         }
 
-        if (version_compare(\PHP_VERSION_ID, '70399', '>')) {
+        if (\PHP_VERSION_ID >= 70400) {
             $targets[] = \T_OPEN_TAG;
         }
 
@@ -79,20 +75,20 @@ class NewPHPOpenTagEOFSniff extends Sniff
      *
      * @since 9.3.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param int                   $stackPtr  The position of the current token
-     *                                         in the stack passed in $tokens.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile The file being scanned.
+     * @param int                         $stackPtr  The position of the current token
+     *                                               in the stack passed in $tokens.
      *
      * @return void
      */
     public function process(File $phpcsFile, $stackPtr)
     {
-        if ($this->supportsBelow('7.3') === false) {
+        if ($stackPtr !== ($phpcsFile->numTokens - 1)) {
+            // We're only interested in the last token in the file.
             return;
         }
 
-        if ($stackPtr !== ($phpcsFile->numTokens - 1)) {
-            // We're only interested in the last token in the file.
+        if (ScannedCode::shouldRunOnOrBelow('7.3') === false) {
             return;
         }
 
@@ -104,9 +100,6 @@ class NewPHPOpenTagEOFSniff extends Sniff
             case \T_INLINE_HTML:
                 // PHP < 7.4 with short open tags off.
                 if ($contents === '<?php') {
-                    $error = true;
-                } elseif ($contents === '<?=') {
-                    // Also cover short open echo tags in PHP 5.3 with short open tags off.
                     $error = true;
                 }
                 break;
@@ -123,7 +116,7 @@ class NewPHPOpenTagEOFSniff extends Sniff
 
             case \T_OPEN_TAG_WITH_ECHO:
                 // PHP 5.4+.
-                if (rtrim($contents) === '<?=') {
+                if (\rtrim($contents) === '<?=') {
                     $error = true;
                 }
                 break;

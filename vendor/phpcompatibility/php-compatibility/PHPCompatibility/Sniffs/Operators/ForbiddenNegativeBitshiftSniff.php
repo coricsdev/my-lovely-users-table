@@ -3,17 +3,20 @@
  * PHPCompatibility, an external standard for PHP_CodeSniffer.
  *
  * @package   PHPCompatibility
- * @copyright 2012-2019 PHPCompatibility Contributors
+ * @copyright 2012-2020 PHPCompatibility Contributors
  * @license   https://opensource.org/licenses/LGPL-3.0 LGPL3
  * @link      https://github.com/PHPCompatibility/PHPCompatibility
  */
 
 namespace PHPCompatibility\Sniffs\Operators;
 
+use PHPCompatibility\Helpers\ScannedCode;
+use PHPCompatibility\Helpers\TokenGroup;
 use PHPCompatibility\Sniff;
-use PHPCompatibility\PHPCSHelper;
-use PHP_CodeSniffer_File as File;
-use PHP_CodeSniffer_Tokens as Tokens;
+use PHP_CodeSniffer\Files\File;
+use PHP_CodeSniffer\Util\Tokens;
+use PHPCSUtils\BackCompat\BCFile;
+use PHPCSUtils\Utils\GetTokensAsString;
 
 /**
  * Bitwise shifts by negative number will throw an ArithmeticError since PHP 7.0.
@@ -27,6 +30,7 @@ use PHP_CodeSniffer_Tokens as Tokens;
  */
 class ForbiddenNegativeBitshiftSniff extends Sniff
 {
+
     /**
      * Potential end tokens for which the end pointer has to be set back by one.
      *
@@ -36,14 +40,14 @@ class ForbiddenNegativeBitshiftSniff extends Sniff
      *
      * @since 8.2.0
      *
-     * @var array
+     * @var array<int|string, true>
      */
-    private $inclusiveStopPoints = array(
+    private $inclusiveStopPoints = [
         \T_COLON        => true,
         \T_COMMA        => true,
         \T_DOUBLE_ARROW => true,
         \T_SEMICOLON    => true,
-    );
+    ];
 
     /**
      * Returns an array of tokens this test wants to listen for.
@@ -51,16 +55,16 @@ class ForbiddenNegativeBitshiftSniff extends Sniff
      * @since 7.0.0
      * @since 8.2.0 Now registers all bitshift tokens, not just bitshift right (`T_SR`).
      *
-     * @return array
+     * @return array<int|string>
      */
     public function register()
     {
-        return array(
+        return [
             \T_SL,
             \T_SL_EQUAL,
             \T_SR,
             \T_SR_EQUAL,
-        );
+        ];
     }
 
     /**
@@ -68,15 +72,15 @@ class ForbiddenNegativeBitshiftSniff extends Sniff
      *
      * @since 7.0.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param int                   $stackPtr  The position of the current token
-     *                                         in the stack passed in $tokens.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile The file being scanned.
+     * @param int                         $stackPtr  The position of the current token
+     *                                               in the stack passed in $tokens.
      *
      * @return void
      */
     public function process(File $phpcsFile, $stackPtr)
     {
-        if ($this->supportsAbove('7.0') === false) {
+        if (ScannedCode::shouldRunOnOrAbove('7.0') === false) {
             return;
         }
 
@@ -89,12 +93,12 @@ class ForbiddenNegativeBitshiftSniff extends Sniff
             $start = ($next + 1);
         }
 
-        $end = PHPCSHelper::findEndOfStatement($phpcsFile, $start);
+        $end = BCFile::findEndOfStatement($phpcsFile, $start);
         if (isset($this->inclusiveStopPoints[$tokens[$end]['code']]) === true) {
             --$end;
         }
 
-        if ($this->isNegativeNumber($phpcsFile, $start, $end, true) !== true) {
+        if (TokenGroup::isNegativeNumber($phpcsFile, $start, $end, true) !== true) {
             // Not a negative number or undetermined.
             return;
         }
@@ -103,7 +107,7 @@ class ForbiddenNegativeBitshiftSniff extends Sniff
             'Bitwise shifts by negative number will throw an ArithmeticError in PHP 7.0. Found: %s',
             $stackPtr,
             'Found',
-            array($phpcsFile->getTokensAsString($start, ($end - $start + 1)))
+            [GetTokensAsString::compact($phpcsFile, $start, ($end - $start + 1), true)]
         );
     }
 }

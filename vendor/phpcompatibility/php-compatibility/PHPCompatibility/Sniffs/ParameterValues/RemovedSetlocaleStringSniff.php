@@ -3,7 +3,7 @@
  * PHPCompatibility, an external standard for PHP_CodeSniffer.
  *
  * @package   PHPCompatibility
- * @copyright 2012-2019 PHPCompatibility Contributors
+ * @copyright 2012-2020 PHPCompatibility Contributors
  * @license   https://opensource.org/licenses/LGPL-3.0 LGPL3
  * @link      https://github.com/PHPCompatibility/PHPCompatibility
  */
@@ -11,7 +11,11 @@
 namespace PHPCompatibility\Sniffs\ParameterValues;
 
 use PHPCompatibility\AbstractFunctionCallParameterSniff;
-use PHP_CodeSniffer_File as File;
+use PHPCompatibility\Helpers\ScannedCode;
+use PHP_CodeSniffer\Files\File;
+use PHP_CodeSniffer\Util\Tokens;
+use PHPCSUtils\Utils\MessageHelper;
+use PHPCSUtils\Utils\PassedParameters;
 
 /**
  * Detect passing a string literal as `$category` to `setlocale()`.
@@ -35,11 +39,11 @@ class RemovedSetlocaleStringSniff extends AbstractFunctionCallParameterSniff
      *
      * @since 9.0.0
      *
-     * @var array
+     * @var array<string, true>
      */
-    protected $targetFunctions = array(
+    protected $targetFunctions = [
         'setlocale' => true,
-    );
+    ];
 
 
     /**
@@ -51,7 +55,7 @@ class RemovedSetlocaleStringSniff extends AbstractFunctionCallParameterSniff
      */
     protected function bowOutEarly()
     {
-        return ($this->supportsAbove('4.2') === false);
+        return (ScannedCode::shouldRunOnOrAbove('4.2') === false);
     }
 
 
@@ -60,36 +64,40 @@ class RemovedSetlocaleStringSniff extends AbstractFunctionCallParameterSniff
      *
      * @since 9.0.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile    The file being scanned.
-     * @param int                   $stackPtr     The position of the current token in the stack.
-     * @param string                $functionName The token content (function name) which was matched.
-     * @param array                 $parameters   Array with information about the parameters.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile    The file being scanned.
+     * @param int                         $stackPtr     The position of the current token in the stack.
+     * @param string                      $functionName The token content (function name) which was matched.
+     * @param array                       $parameters   Array with information about the parameters.
      *
      * @return int|void Integer stack pointer to skip forward or void to continue
      *                  normal file processing.
      */
     public function processParameters(File $phpcsFile, $stackPtr, $functionName, $parameters)
     {
-        if (isset($parameters[1]) === false) {
+        $targetParam = PassedParameters::getParameterFromStack($parameters, 1, 'category');
+        if ($targetParam === false) {
             return;
         }
 
-        $tokens      = $phpcsFile->getTokens();
-        $targetParam = $parameters[1];
-
+        $tokens = $phpcsFile->getTokens();
         for ($i = $targetParam['start']; $i <= $targetParam['end']; $i++) {
-            if ($tokens[$i]['code'] !== \T_CONSTANT_ENCAPSED_STRING
-                && $tokens[$i]['code'] !== \T_DOUBLE_QUOTED_STRING
+            if ($tokens[$i]['code'] === \T_STRING
+                || $tokens[$i]['code'] === \T_VARIABLE
             ) {
+                // Variable, constant, function call. Ignore as undetermined.
+                return;
+            }
+
+            if (isset(Tokens::$stringTokens[$tokens[$i]['code']]) === false) {
                 continue;
             }
 
             $message   = 'Passing the $category as a string to setlocale() has been deprecated since PHP 4.2';
             $isError   = false;
             $errorCode = 'Deprecated';
-            $data      = array($targetParam['raw']);
+            $data      = [$targetParam['clean']];
 
-            if ($this->supportsAbove('7.0') === true) {
+            if (ScannedCode::shouldRunOnOrAbove('7.0') === true) {
                 $message  .= ' and is removed since PHP 7.0';
                 $isError   = true;
                 $errorCode = 'Removed';
@@ -97,7 +105,7 @@ class RemovedSetlocaleStringSniff extends AbstractFunctionCallParameterSniff
 
             $message .= '; Pass one of the LC_* constants instead. Found: %s';
 
-            $this->addMessage($phpcsFile, $message, $i, $isError, $errorCode, $data);
+            MessageHelper::addMessage($phpcsFile, $message, $i, $isError, $errorCode, $data);
             break;
         }
     }

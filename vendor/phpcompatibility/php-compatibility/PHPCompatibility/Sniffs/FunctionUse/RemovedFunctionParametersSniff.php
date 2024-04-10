@@ -3,16 +3,20 @@
  * PHPCompatibility, an external standard for PHP_CodeSniffer.
  *
  * @package   PHPCompatibility
- * @copyright 2012-2019 PHPCompatibility Contributors
+ * @copyright 2012-2020 PHPCompatibility Contributors
  * @license   https://opensource.org/licenses/LGPL-3.0 LGPL3
  * @link      https://github.com/PHPCompatibility/PHPCompatibility
  */
 
 namespace PHPCompatibility\Sniffs\FunctionUse;
 
-use PHPCompatibility\AbstractRemovedFeatureSniff;
-use PHP_CodeSniffer_File as File;
-use PHP_CodeSniffer_Tokens as Tokens;
+use PHPCompatibility\AbstractFunctionCallParameterSniff;
+use PHPCompatibility\Helpers\ComplexVersionDeprecatedRemovedFeatureTrait;
+use PHPCompatibility\Helpers\ScannedCode;
+use PHP_CodeSniffer\Files\File;
+use PHP_CodeSniffer\Util\Tokens;
+use PHPCSUtils\Utils\MessageHelper;
+use PHPCSUtils\Utils\PassedParameters;
 
 /**
  * Detect use of deprecated/removed function parameters in calls to native PHP functions.
@@ -22,15 +26,19 @@ use PHP_CodeSniffer_Tokens as Tokens;
  * @link https://www.php.net/manual/en/doc.changelog.php
  *
  * @since 7.0.0
- * @since 7.1.0 Now extends the `AbstractRemovedFeatureSniff` instead of the base `Sniff` class.
+ * @since 7.1.0  Now extends the `AbstractRemovedFeatureSniff` instead of the base `Sniff` class.
+ * @since 10.0.0 Now extends the base `AbstractFunctionCallParameterSniff` class
+ *               and uses the `ComplexVersionNewFeatureTrait`.
  */
-class RemovedFunctionParametersSniff extends AbstractRemovedFeatureSniff
+class RemovedFunctionParametersSniff extends AbstractFunctionCallParameterSniff
 {
+    use ComplexVersionDeprecatedRemovedFeatureTrait;
+
     /**
      * A list of removed function parameters, which were present in older versions.
      *
      * The array lists : version number with false (deprecated) and true (removed).
-     * The index is the location of the parameter in the parameter list, starting at 0 !
+     * The index is the 1-based parameter position of the parameter in the parameter list.
      * If's sufficient to list the first version where the function parameter was deprecated/removed.
      *
      * The optional `callback` key can be used to pass a method name which should be called for an
@@ -38,255 +46,298 @@ class RemovedFunctionParametersSniff extends AbstractRemovedFeatureSniff
      * if the notice should be thrown or false otherwise.
      *
      * @since 7.0.0
-     * @since 7.0.2 Visibility changed from `public` to `protected`.
-     * @since 9.3.0 Optional `callback` key.
+     * @since 7.0.2  Visibility changed from `public` to `protected`.
+     * @since 9.3.0  Optional `callback` key.
+     * @since 10.0.0 - The parameter offsets were changed from 0-based to 1-based.
+     *               - The property was renamed from `$removedFunctionParameters` to `$targetFunctions`.
      *
-     * @var array
+     * @var array<string, array<int, array<string, bool|string>>>
      */
-    protected $removedFunctionParameters = array(
-        'curl_version' => array(
-            0 => array(
-                'name'     => 'age',
-                '7.4'      => false,
-                'callback' => 'curlVersionInvalidValue',
-            ),
-        ),
-        'define' => array(
-            2 => array(
+    protected $targetFunctions = [
+        'curl_version' => [
+            1 => [
+                'name' => 'age',
+                '7.4'  => false,
+                '8.0'  => true,
+            ],
+        ],
+        'define' => [
+            3 => [
                 'name' => 'case_insensitive',
-                '7.3'  => false, // Slated for removal in PHP 8.0.0.
-            ),
-        ),
-        'gmmktime' => array(
-            6 => array(
-                'name' => 'is_dst',
+                '7.3'  => false,
+                '8.0'  => true,
+            ],
+        ],
+        'gmmktime' => [
+            7 => [
+                'name' => 'isDST',
                 '5.1'  => false,
                 '7.0'  => true,
-            ),
-        ),
-        'ldap_first_attribute' => array(
-            2 => array(
+            ],
+        ],
+        /*
+         * For the below three functions, it's actually the 3rd parameter which has been deprecated.
+         * However with positional arguments, this can only be detected by checking for the "old last" argument.
+         * Note: this function explicitly does NOT support named parameters for the function
+         * signature without this parameter, but that's not the concern of this sniff.
+         */
+        'imagefilledpolygon' => [
+            4 => [
+                'name' => 'num_points',
+                '8.1'  => false,
+            ],
+        ],
+        'imageopenpolygon' => [
+            4 => [
+                'name' => 'num_points',
+                '8.1'  => false,
+            ],
+        ],
+        'imagepolygon' => [
+            4 => [
+                'name' => 'num_points',
+                '8.1'  => false,
+            ],
+        ],
+        'imagerotate' => [
+            4 => [
+                'name' => 'ignore_transparent',
+                '8.3'  => true,
+            ],
+        ],
+        'imap_headerinfo' => [
+            5 => [
+                'name' => 'defaulthost',
+                '8.0'  => true,
+            ],
+        ],
+        'ldap_exop' => [
+            5 => [
+                'name'        => 'response_data',
+                '8.4'         => false,
+                'alternative' => 'the PHP 8.3+ ldap_exop_sync() function',
+            ],
+            6 => [
+                'name'        => 'response_oid',
+                '8.4'         => false,
+                'alternative' => 'the PHP 8.3+ ldap_exop_sync() function',
+            ],
+        ],
+        'ldap_first_attribute' => [
+            3 => [
                 'name'  => 'ber_identifier',
                 '5.2.4' => true,
-            ),
-        ),
-        'ldap_next_attribute' => array(
-            2 => array(
+            ],
+        ],
+        'ldap_next_attribute' => [
+            3 => [
                 'name'  => 'ber_identifier',
                 '5.2.4' => true,
-            ),
-        ),
-        'mktime' => array(
-            6 => array(
-                'name' => 'is_dst',
+            ],
+        ],
+        'mb_decode_numericentity' => [
+            4 => [
+                'name' => 'is_hex',
+                '8.0'  => true,
+            ],
+        ],
+        'mktime' => [
+            7 => [
+                'name' => 'isDST',
                 '5.1'  => false,
                 '7.0'  => true,
-            ),
-        ),
-    );
-
+            ],
+        ],
+        'mysqli_get_client_info' => [
+            1 => [
+                'name' => 'mysql',
+                '8.1'  => false,
+            ],
+        ],
+        'odbc_do' => [
+            3 => [
+                'name' => 'flags',
+                '8.0'  => true,
+            ],
+        ],
+        'odbc_exec' => [
+            3 => [
+                'name' => 'flags',
+                '8.0'  => true,
+            ],
+        ],
+        'pg_connect' => [
+            // These were already deprecated before, but version in which deprecation took place is unclear.
+            3 => [
+                'name' => 'options',
+                '8.0'  => true,
+            ],
+            4 => [
+                'name' => 'tty',
+                '8.0'  => true,
+            ],
+            5 => [
+                'name' => 'dbname',
+                '8.0'  => true,
+            ],
+        ],
+        'session_set_save_handler' => [
+            3 => [
+                'name'        => 'read',
+                '8.4'         => false,
+                'alternative' => 'a SessionHandlerInterface implementation for the callbacks instead',
+            ],
+            4 => [
+                'name'        => 'write',
+                '8.4'         => false,
+                'alternative' => 'a SessionHandlerInterface implementation for the callbacks instead',
+            ],
+            5 => [
+                'name'        => 'destroy',
+                '8.4'         => false,
+                'alternative' => 'a SessionHandlerInterface implementation for the callbacks instead',
+            ],
+            6 => [
+                'name'        => 'gc',
+                '8.4'         => false,
+                'alternative' => 'a SessionHandlerInterface implementation for the callbacks instead',
+            ],
+            7 => [
+                'name'        => 'create_sid',
+                '8.4'         => false,
+                'alternative' => 'a SessionHandlerInterface implementation for the callbacks instead',
+            ],
+            8 => [
+                'name'        => 'validate_sid',
+                '8.4'         => false,
+                'alternative' => 'a SessionHandlerInterface implementation for the callbacks instead',
+            ],
+            9 => [
+                'name'        => 'update_timestamp',
+                '8.4'         => false,
+                'alternative' => 'a SessionHandlerInterface implementation for the callbacks instead',
+            ],
+        ],
+    ];
 
     /**
-     * Returns an array of tokens this test wants to listen for.
+     * Should the sniff bow out early for specific PHP versions ?
      *
-     * @since 7.0.0
+     * @since 10.0.0
      *
-     * @return array
+     * @return bool
      */
-    public function register()
+    protected function bowOutEarly()
     {
-        // Handle case-insensitivity of function names.
-        $this->removedFunctionParameters = $this->arrayKeysToLowercase($this->removedFunctionParameters);
-
-        return array(\T_STRING);
+        return false;
     }
 
     /**
-     * Processes this test, when one of its tokens is encountered.
+     * Process the parameters of a matched function.
      *
-     * @since 7.0.0
+     * @since 10.0.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param int                   $stackPtr  The position of the current token in
-     *                                         the stack passed in $tokens.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile    The file being scanned.
+     * @param int                         $stackPtr     The position of the current token in the stack.
+     * @param string                      $functionName The token content (function name) which was matched.
+     * @param array                       $parameters   Array with information about the parameters.
      *
      * @return void
      */
-    public function process(File $phpcsFile, $stackPtr)
+    public function processParameters(File $phpcsFile, $stackPtr, $functionName, $parameters)
     {
-        $tokens = $phpcsFile->getTokens();
+        $functionLc = \strtolower($functionName);
 
-        $ignore = array(
-            \T_DOUBLE_COLON    => true,
-            \T_OBJECT_OPERATOR => true,
-            \T_FUNCTION        => true,
-            \T_CONST           => true,
-        );
+        foreach ($this->targetFunctions[$functionLc] as $offset => $parameterDetails) {
+            $targetParam = PassedParameters::getParameterFromStack($parameters, $offset, $parameterDetails['name']);
 
-        $prevToken = $phpcsFile->findPrevious(\T_WHITESPACE, ($stackPtr - 1), null, true);
-        if (isset($ignore[$tokens[$prevToken]['code']]) === true) {
-            // Not a call to a PHP function.
-            return;
-        }
-
-        $function   = $tokens[$stackPtr]['content'];
-        $functionLc = strtolower($function);
-
-        if (isset($this->removedFunctionParameters[$functionLc]) === false) {
-            return;
-        }
-
-        $parameters     = $this->getFunctionCallParameters($phpcsFile, $stackPtr);
-        $parameterCount = \count($parameters);
-        if ($parameterCount === 0) {
-            return;
-        }
-
-        // If the parameter count returned > 0, we know there will be valid open parenthesis.
-        $openParenthesis      = $phpcsFile->findNext(Tokens::$emptyTokens, $stackPtr + 1, null, true, null, true);
-        $parameterOffsetFound = $parameterCount - 1;
-
-        foreach ($this->removedFunctionParameters[$functionLc] as $offset => $parameterDetails) {
-            if ($offset <= $parameterOffsetFound) {
-                if (isset($parameterDetails['callback']) && method_exists($this, $parameterDetails['callback'])) {
-                    if ($this->{$parameterDetails['callback']}($phpcsFile, $parameters[($offset + 1)]) === false) {
+            if ($targetParam !== false && $targetParam['clean'] !== '') {
+                if (isset($parameterDetails['callback']) && \method_exists($this, $parameterDetails['callback'])) {
+                    if ($this->{$parameterDetails['callback']}($phpcsFile, $targetParam) === false) {
                         continue;
                     }
                 }
 
-                $itemInfo = array(
-                    'name'   => $function,
+                $firstNonEmpty = $phpcsFile->findNext(Tokens::$emptyTokens, $targetParam['start'], ($targetParam['end'] + 1), true);
+
+                $itemInfo = [
+                    'name'   => $functionName,
                     'nameLc' => $functionLc,
                     'offset' => $offset,
-                );
-                $this->handleFeature($phpcsFile, $openParenthesis, $itemInfo);
+                ];
+                $this->handleFeature($phpcsFile, $firstNonEmpty, $itemInfo);
             }
         }
     }
 
 
     /**
-     * Get the relevant sub-array for a specific item from a multi-dimensional array.
+     * Handle the retrieval of relevant information and - if necessary - throwing of an
+     * error/warning for a matched item.
      *
-     * @since 7.1.0
+     * @since 10.0.0
      *
-     * @param array $itemInfo Base information about the item.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile The file being scanned.
+     * @param int                         $stackPtr  The position of the relevant token in
+     *                                               the stack.
+     * @param array                       $itemInfo  Base information about the item.
      *
-     * @return array Version and other information about the item.
+     * @return void
      */
-    public function getItemArray(array $itemInfo)
+    protected function handleFeature(File $phpcsFile, $stackPtr, array $itemInfo)
     {
-        return $this->removedFunctionParameters[$itemInfo['nameLc']][$itemInfo['offset']];
-    }
+        $itemArray   = $this->targetFunctions[$itemInfo['nameLc']][$itemInfo['offset']];
+        $versionInfo = $this->getVersionInfo($itemArray);
+        $isError     = null;
 
-
-    /**
-     * Get an array of the non-PHP-version array keys used in a sub-array.
-     *
-     * @since 7.1.0
-     *
-     * @return array
-     */
-    protected function getNonVersionArrayKeys()
-    {
-        return array('name', 'callback');
-    }
-
-
-    /**
-     * Retrieve the relevant detail (version) information for use in an error message.
-     *
-     * @since 7.1.0
-     *
-     * @param array $itemArray Version and other information about the item.
-     * @param array $itemInfo  Base information about the item.
-     *
-     * @return array
-     */
-    public function getErrorInfo(array $itemArray, array $itemInfo)
-    {
-        $errorInfo              = parent::getErrorInfo($itemArray, $itemInfo);
-        $errorInfo['paramName'] = $itemArray['name'];
-
-        return $errorInfo;
-    }
-
-
-    /**
-     * Get the item name to be used for the creation of the error code.
-     *
-     * @since 7.1.0
-     *
-     * @param array $itemInfo  Base information about the item.
-     * @param array $errorInfo Detail information about an item.
-     *
-     * @return string
-     */
-    protected function getItemName(array $itemInfo, array $errorInfo)
-    {
-        return $itemInfo['name'] . '_' . $errorInfo['paramName'];
-    }
-
-
-    /**
-     * Get the error message template for this sniff.
-     *
-     * @since 7.1.0
-     *
-     * @return string
-     */
-    protected function getErrorMsgTemplate()
-    {
-        return 'The "%s" parameter for function %s() is ';
-    }
-
-
-    /**
-     * Filter the error data before it's passed to PHPCS.
-     *
-     * @since 7.1.0
-     *
-     * @param array $data      The error data array which was created.
-     * @param array $itemInfo  Base information about the item this error message applies to.
-     * @param array $errorInfo Detail information about an item this error message applies to.
-     *
-     * @return array
-     */
-    protected function filterErrorData(array $data, array $itemInfo, array $errorInfo)
-    {
-        array_shift($data);
-        array_unshift($data, $errorInfo['paramName'], $itemInfo['name']);
-        return $data;
-    }
-
-    /**
-     * Check whether curl_version() was passed the default CURLVERSION_NOW.
-     *
-     * @since 9.3.0
-     *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param array                 $parameter Parameter info array.
-     *
-     * @return bool True if the value was not CURLVERSION_NOW, false otherwise.
-     */
-    protected function curlVersionInvalidValue(File $phpcsFile, array $parameter)
-    {
-        $tokens = $phpcsFile->getTokens();
-        $raw    = '';
-        for ($i = $parameter['start']; $i <= $parameter['end']; $i++) {
-            if (isset(Tokens::$emptyTokens[$tokens[$i]['code']])) {
-                continue;
-            }
-
-            $raw .= $tokens[$i]['content'];
-        }
-
-        if ($raw !== 'CURLVERSION_NOW'
-            && $raw !== (string) \CURLVERSION_NOW
+        if (empty($versionInfo['removed']) === false
+            && ScannedCode::shouldRunOnOrAbove($versionInfo['removed']) === true
         ) {
-            return true;
+            $isError = true;
+        } elseif (empty($versionInfo['deprecated']) === false
+            && ScannedCode::shouldRunOnOrAbove($versionInfo['deprecated']) === true
+        ) {
+            $isError = false;
+
+            // Reset the 'removed' info as it is not relevant for the current notice.
+            $versionInfo['removed'] = '';
         }
 
-        return false;
+        if (isset($isError) === false) {
+            return;
+        }
+
+        $this->addMessage($phpcsFile, $stackPtr, $isError, $itemInfo, $itemArray, $versionInfo);
+    }
+
+
+    /**
+     * Generates the error or warning for this item.
+     *
+     * @since 10.0.0
+     *
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile   The file being scanned.
+     * @param int                         $stackPtr    The position of the relevant token in
+     *                                                 the stack.
+     * @param bool                        $isError     Whether this should be an error or a warning.
+     * @param array                       $itemInfo    Base information about the item.
+     * @param array                       $itemArray   The sub-array with all the details about
+     *                                                 this item.
+     * @param string[]                    $versionInfo Array with detail (version) information
+     *                                                 relevant to the item.
+     *
+     * @return void
+     */
+    protected function addMessage(File $phpcsFile, $stackPtr, $isError, array $itemInfo, array $itemArray, array $versionInfo)
+    {
+        // Overrule the default message template.
+        $this->msgTemplate = 'The "%s" parameter for function %s() is ';
+
+        $msgInfo = $this->getMessageInfo($itemInfo['name'], $itemInfo['nameLc'] . '_' . $itemArray['name'], $versionInfo);
+
+        $data = $msgInfo['data'];
+        \array_unshift($data, $itemArray['name']);
+
+        MessageHelper::addMessage($phpcsFile, $msgInfo['message'], $stackPtr, $isError, $msgInfo['errorcode'], $data);
     }
 }

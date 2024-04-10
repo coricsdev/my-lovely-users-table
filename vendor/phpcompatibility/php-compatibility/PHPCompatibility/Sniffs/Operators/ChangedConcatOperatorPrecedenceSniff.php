@@ -3,16 +3,20 @@
  * PHPCompatibility, an external standard for PHP_CodeSniffer.
  *
  * @package   PHPCompatibility
- * @copyright 2012-2019 PHPCompatibility Contributors
+ * @copyright 2012-2020 PHPCompatibility Contributors
  * @license   https://opensource.org/licenses/LGPL-3.0 LGPL3
  * @link      https://github.com/PHPCompatibility/PHPCompatibility
  */
 
 namespace PHPCompatibility\Sniffs\Operators;
 
+use PHPCompatibility\Helpers\ScannedCode;
 use PHPCompatibility\Sniff;
-use PHP_CodeSniffer_File as File;
-use PHP_CodeSniffer_Tokens as Tokens;
+use PHP_CodeSniffer\Files\File;
+use PHP_CodeSniffer\Util\Tokens;
+use PHPCSUtils\Tokens\Collections;
+use PHPCSUtils\Utils\MessageHelper;
+use PHPCSUtils\Utils\Operators;
 
 /**
  * Detect code affected by the change in operator precedence of concatenation in PHP 8.0.
@@ -40,9 +44,9 @@ class ChangedConcatOperatorPrecedenceSniff extends Sniff
      *
      * @since 9.2.0
      *
-     * @var array
+     * @var array<string, true>
      */
-    private $tokensWithLowerPrecedence = array(
+    private $tokensWithLowerPrecedence = [
         'T_BITWISE_AND' => true,
         'T_BITWISE_XOR' => true,
         'T_BITWISE_OR'  => true,
@@ -51,7 +55,7 @@ class ChangedConcatOperatorPrecedenceSniff extends Sniff
         'T_INLINE_ELSE' => true,
         'T_YIELD_FROM'  => true,
         'T_YIELD'       => true,
-    );
+    ];
 
 
     /**
@@ -59,14 +63,14 @@ class ChangedConcatOperatorPrecedenceSniff extends Sniff
      *
      * @since 9.2.0
      *
-     * @return array
+     * @return array<int|string>
      */
     public function register()
     {
-        return array(
+        return [
             \T_PLUS,
             \T_MINUS,
-        );
+        ];
     }
 
     /**
@@ -74,19 +78,19 @@ class ChangedConcatOperatorPrecedenceSniff extends Sniff
      *
      * @since 9.2.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param int                   $stackPtr  The position of the current token in the
-     *                                         stack passed in $tokens.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile The file being scanned.
+     * @param int                         $stackPtr  The position of the current token in the
+     *                                               stack passed in $tokens.
      *
      * @return void
      */
     public function process(File $phpcsFile, $stackPtr)
     {
-        if ($this->supportsAbove('7.4') === false) {
+        if (ScannedCode::shouldRunOnOrAbove('7.4') === false) {
             return;
         }
 
-        if ($this->isUnaryPlusMinus($phpcsFile, $stackPtr) === true) {
+        if (Operators::isUnaryPlusMinus($phpcsFile, $stackPtr) === true) {
             return;
         }
 
@@ -100,11 +104,10 @@ class ChangedConcatOperatorPrecedenceSniff extends Sniff
 
             if ($tokens[$i]['code'] === \T_SEMICOLON
                 || $tokens[$i]['code'] === \T_OPEN_CURLY_BRACKET
-                || $tokens[$i]['code'] === \T_OPEN_TAG
-                || $tokens[$i]['code'] === \T_OPEN_TAG_WITH_ECHO
                 || $tokens[$i]['code'] === \T_COMMA
                 || $tokens[$i]['code'] === \T_COLON
                 || $tokens[$i]['code'] === \T_CASE
+                || isset(Collections::phpOpenTags()[$tokens[$i]['code']]) === true
             ) {
                 // If we reached any of the above tokens, we've reached the end of
                 // the statement without encountering a concatenation operator.
@@ -189,11 +192,11 @@ class ChangedConcatOperatorPrecedenceSniff extends Sniff
 
         $message = 'Using an unparenthesized expression containing a "." before a "+" or "-" has been deprecated in PHP 7.4';
         $isError = false;
-        if ($this->supportsAbove('8.0') === true) {
+        if (ScannedCode::shouldRunOnOrAbove('8.0') === true) {
             $message .= ' and removed in PHP 8.0';
             $isError  = true;
         }
 
-        $this->addMessage($phpcsFile, $message, $i, $isError);
+        MessageHelper::addMessage($phpcsFile, $message, $i, $isError);
     }
 }

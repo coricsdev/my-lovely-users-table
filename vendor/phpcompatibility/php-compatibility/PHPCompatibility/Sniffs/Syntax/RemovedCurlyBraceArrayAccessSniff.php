@@ -3,24 +3,28 @@
  * PHPCompatibility, an external standard for PHP_CodeSniffer.
  *
  * @package   PHPCompatibility
- * @copyright 2012-2019 PHPCompatibility Contributors
+ * @copyright 2012-2020 PHPCompatibility Contributors
  * @license   https://opensource.org/licenses/LGPL-3.0 LGPL3
  * @link      https://github.com/PHPCompatibility/PHPCompatibility
  */
 
 namespace PHPCompatibility\Sniffs\Syntax;
 
+use PHPCompatibility\Helpers\MiscHelper;
+use PHPCompatibility\Helpers\ScannedCode;
 use PHPCompatibility\Sniff;
 use PHPCompatibility\Sniffs\Syntax\NewArrayStringDereferencingSniff;
 use PHPCompatibility\Sniffs\Syntax\NewClassMemberAccessSniff;
 use PHPCompatibility\Sniffs\Syntax\NewFunctionArrayDereferencingSniff;
-use PHP_CodeSniffer_File as File;
-use PHP_CodeSniffer_Tokens as Tokens;
+use PHP_CodeSniffer\Files\File;
+use PHP_CodeSniffer\Util\Tokens;
 
 /**
- * Using the curly brace syntax to access array or string offsets has been deprecated in PHP 7.4.
+ * Using the curly brace syntax to access array or string offsets has been deprecated in PHP 7.4
+ * and removed in PHP 8.0.
  *
  * PHP version 7.4
+ * PHP version 8.0
  *
  * @link https://www.php.net/manual/en/migration74.deprecated.php#migration74.deprecated.core.array-string-access-curly-brace
  * @link https://wiki.php.net/rfc/deprecate_curly_braces_array_access
@@ -40,11 +44,11 @@ class RemovedCurlyBraceArrayAccessSniff extends Sniff
     private $newArrayStringDereferencing;
 
     /**
-     * Target tokens as register by the NewArrayStringDereferencing sniff.
+     * Target tokens as registered by the NewArrayStringDereferencing sniff.
      *
      * @since 9.3.0
      *
-     * @var array
+     * @var array<int|string>
      */
     private $newArrayStringDereferencingTargets;
 
@@ -58,11 +62,11 @@ class RemovedCurlyBraceArrayAccessSniff extends Sniff
     private $newClassMemberAccess;
 
     /**
-     * Target tokens as register by the NewClassMemberAccess sniff.
+     * Target tokens as registered by the NewClassMemberAccess sniff.
      *
      * @since 9.3.0
      *
-     * @var array
+     * @var array<int|string>
      */
     private $newClassMemberAccessTargets;
 
@@ -76,11 +80,11 @@ class RemovedCurlyBraceArrayAccessSniff extends Sniff
     private $newFunctionArrayDereferencing;
 
     /**
-     * Target tokens as register by the NewFunctionArrayDereferencing sniff.
+     * Target tokens as registered by the NewFunctionArrayDereferencing sniff.
      *
      * @since 9.3.0
      *
-     * @var array
+     * @var array<int|string>
      */
     private $newFunctionArrayDereferencingTargets;
 
@@ -103,33 +107,33 @@ class RemovedCurlyBraceArrayAccessSniff extends Sniff
      *
      * @since 9.3.0
      *
-     * @return array
+     * @return array<int|string>
      */
     public function register()
     {
-        $targets = array(
-            array(
+        $targets = [
+            [
                 \T_VARIABLE,
                 \T_STRING, // Constants.
-            ),
-        );
+            ],
+        ];
 
         // Registers T_ARRAY, T_OPEN_SHORT_ARRAY and T_CONSTANT_ENCAPSED_STRING.
         $additionalTargets                        = $this->newArrayStringDereferencing->register();
-        $this->newArrayStringDereferencingTargets = array_flip($additionalTargets);
+        $this->newArrayStringDereferencingTargets = \array_flip($additionalTargets);
         $targets[] = $additionalTargets;
 
         // Registers T_NEW and T_CLONE.
         $additionalTargets                 = $this->newClassMemberAccess->register();
-        $this->newClassMemberAccessTargets = array_flip($additionalTargets);
+        $this->newClassMemberAccessTargets = \array_flip($additionalTargets);
         $targets[]                         = $additionalTargets;
 
         // Registers T_STRING.
         $additionalTargets = $this->newFunctionArrayDereferencing->register();
-        $this->newFunctionArrayDereferencingTargets = array_flip($additionalTargets);
+        $this->newFunctionArrayDereferencingTargets = \array_flip($additionalTargets);
         $targets[] = $additionalTargets;
 
-        return call_user_func_array('array_merge', $targets);
+        return \call_user_func_array('array_merge', $targets);
     }
 
 
@@ -138,20 +142,20 @@ class RemovedCurlyBraceArrayAccessSniff extends Sniff
      *
      * @since 9.3.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param int                   $stackPtr  The position of the current token in
-     *                                         the stack passed in $tokens.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile The file being scanned.
+     * @param int                         $stackPtr  The position of the current token in
+     *                                               the stack passed in $tokens.
      *
      * @return void
      */
     public function process(File $phpcsFile, $stackPtr)
     {
-        if ($this->supportsAbove('7.4') === false) {
+        if (ScannedCode::shouldRunOnOrAbove('7.4') === false) {
             return;
         }
 
         $tokens = $phpcsFile->getTokens();
-        $braces = array();
+        $braces = [];
 
         // Note: Overwriting braces in each `if` is fine as only one will match anyway.
         if ($tokens[$stackPtr]['code'] === \T_VARIABLE) {
@@ -181,6 +185,16 @@ class RemovedCurlyBraceArrayAccessSniff extends Sniff
             return;
         }
 
+        $isError = (ScannedCode::shouldRunOnOrAbove('8.0') === true);
+
+        $errorMsg  = 'Curly brace syntax for accessing array elements and string offsets has been deprecated in PHP 7.4';
+        $errorCode = 'Deprecated';
+        if ($isError === true) {
+            $errorMsg .= ' and removed in PHP 8.0';
+            $errorCode = 'Removed';
+        }
+        $errorMsg .= '. Found: %s';
+
         foreach ($braces as $open => $close) {
             // Some of the functions will sniff for both curlies as well as square braces.
             if ($tokens[$open]['code'] !== \T_OPEN_CURLY_BRACKET) {
@@ -196,12 +210,12 @@ class RemovedCurlyBraceArrayAccessSniff extends Sniff
 
             // OK, so we've found curly brace array access.
             $snippet = $phpcsFile->getTokensAsString($stackPtr, (($close - $stackPtr) + 1));
-            $fix     = $phpcsFile->addFixableWarning(
-                'Curly brace syntax for accessing array elements and string offsets has been deprecated in PHP 7.4. Found: %s',
-                $open,
-                'Found',
-                array($snippet)
-            );
+
+            if ($isError === false) {
+                $fix = $phpcsFile->addFixableWarning($errorMsg, $open, $errorCode, [$snippet]);
+            } else {
+                $fix = $phpcsFile->addFixableError($errorMsg, $open, $errorCode, [$snippet]);
+            }
 
             if ($fix === true) {
                 $phpcsFile->fixer->beginChangeset();
@@ -218,9 +232,9 @@ class RemovedCurlyBraceArrayAccessSniff extends Sniff
      *
      * @since 9.3.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param int                   $stackPtr  The position of the current token in
-     *                                         the stack passed in $tokens.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile The file being scanned.
+     * @param int                         $stackPtr  The position of the current token in
+     *                                               the stack passed in $tokens.
      *
      * @return array An array with the stack pointers to the open/close braces of
      *               the curly brace array access, or an empty array if no curly
@@ -230,7 +244,7 @@ class RemovedCurlyBraceArrayAccessSniff extends Sniff
     {
         $tokens  = $phpcsFile->getTokens();
         $current = $stackPtr;
-        $braces  = array();
+        $braces  = [];
 
         do {
             $current = $phpcsFile->findNext(Tokens::$emptyTokens, ($current + 1), null, true);
@@ -248,7 +262,9 @@ class RemovedCurlyBraceArrayAccessSniff extends Sniff
             }
 
             // Handle property access.
-            if ($tokens[$current]['code'] === \T_OBJECT_OPERATOR) {
+            if ($tokens[$current]['code'] === \T_OBJECT_OPERATOR
+                || $tokens[$current]['code'] === \T_NULLSAFE_OBJECT_OPERATOR
+            ) {
                 $nextNonEmpty = $phpcsFile->findNext(Tokens::$emptyTokens, ($current + 1), null, true);
                 if ($nextNonEmpty === false || $tokens[$nextNonEmpty]['code'] !== \T_STRING) {
                     // Live coding or parse error.
@@ -290,9 +306,9 @@ class RemovedCurlyBraceArrayAccessSniff extends Sniff
      *
      * @since 9.3.0
      *
-     * @param \PHP_CodeSniffer_File $phpcsFile The file being scanned.
-     * @param int                   $stackPtr  The position of the current token in
-     *                                         the stack passed in $tokens.
+     * @param \PHP_CodeSniffer\Files\File $phpcsFile The file being scanned.
+     * @param int                         $stackPtr  The position of the current token in
+     *                                               the stack passed in $tokens.
      *
      * @return array An array with the stack pointers to the open/close braces of
      *               the curly brace array access, or an empty array if no curly
@@ -303,26 +319,26 @@ class RemovedCurlyBraceArrayAccessSniff extends Sniff
         $tokens       = $phpcsFile->getTokens();
         $prevNonEmpty = $phpcsFile->findPrevious(Tokens::$emptyTokens, ($stackPtr - 1), null, true);
 
-        if ($this->isUseOfGlobalConstant($phpcsFile, $stackPtr) === false
+        if (MiscHelper::isUseOfGlobalConstant($phpcsFile, $stackPtr) === false
             && $tokens[$prevNonEmpty]['code'] !== \T_DOUBLE_COLON // Class constant access.
         ) {
-            return array();
+            return [];
         }
 
         $nextNonEmpty = $phpcsFile->findNext(Tokens::$emptyTokens, ($stackPtr + 1), null, true);
         if ($nextNonEmpty === false) {
-            return array();
+            return [];
         }
 
         if ($tokens[$nextNonEmpty]['code'] !== \T_OPEN_SQUARE_BRACKET
             || isset($tokens[$nextNonEmpty]['bracket_closer']) === false
         ) {
             // Array access for constants must start with square brackets.
-            return array();
+            return [];
         }
 
         $current = $tokens[$nextNonEmpty]['bracket_closer'];
-        $braces  = array();
+        $braces  = [];
 
         do {
             $current = $phpcsFile->findNext(Tokens::$emptyTokens, ($current + 1), null, true);
