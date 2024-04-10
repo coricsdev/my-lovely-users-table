@@ -1,0 +1,84 @@
+{
+    "name": "inpsyde/php-coding-standards",
+    "description": "PHP 7.4+ coding standards for Syde WordPress projects.",
+    "type": "phpcodesniffer-standard",
+    "keywords": [
+        "phpcs",
+        "standards",
+        "static analysis",
+        "code standards",
+        "code style",
+        "coding standards",
+        "coding style",
+        "PSR-2",
+        "PSR-12",
+        "object calisthenics",
+        "PHP standards",
+        "WordPress",
+        "WordPress standards",
+        "Inpsyde",
+        "Syde"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Syde GmbH",
+            "email": "hello@syde.com",
+            "homepage": "https://syde.com",
+            "role": "Company"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "php": ">=7.4",
+        "automattic/vipwpcs": "^3.0.0",
+        "dealerdirect/phpcodesniffer-composer-installer": "~1.0.0",
+        "phpcompatibility/php-compatibility": "^9.3.5 || ^10",
+        "phpcsstandards/phpcsextra": "^1.1",
+        "phpcsstandards/phpcsutils": "^1.0",
+        "slevomat/coding-standard": "^8.13"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6.11",
+        "vimeo/psalm": "^5.15.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Inpsyde\\CodingStandard\\Helpers\\": "Inpsyde/Helpers/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Inpsyde\\CodingStandard\\Tests\\": [
+                "tests/src/",
+                "tests/unit/cases",
+                "tests/e2e/cases"
+            ]
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-version/1": "1.x-dev",
+            "dev-version/2": "2.x-dev"
+        }
+    },
+    "scripts" : {
+        "cs": "@php ./vendor/squizlabs/php_codesniffer/bin/phpcs",
+        "tests": "@php ./vendor/phpunit/phpunit/phpunit",
+        "tests:no-cov": "@php ./vendor/phpunit/phpunit/phpunit --no-coverage",
+        "psalm": "@php ./vendor/vimeo/psalm/psalm --no-suggestions --report-show-info=false --find-unused-psalm-suppress --no-diff --no-cache --no-file-cache --output-format=compact",
+        "qa": [
+            "@cs",
+            "@tests:no-cov",
+            "@psalm"
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "inpsyde/*": true,
+            "composer/*": true,
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
+}

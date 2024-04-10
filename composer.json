@@ -1,0 +1,28 @@
+{
+    "name": "coricsdev/my-lovely-users-table",
+    "description": "A WordPress plugin for displaying a table of users via API.",
+    "type": "wordpress-plugin",
+    "authors": [
+        {
+            "name": "Rico Dadiz",
+            "email": "dadizrico@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "inpsyde/php-coding-standards": "^2@dev"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "MyLovelyUsersTable\\": "includes/"
+        }
+    }
+    
+}
