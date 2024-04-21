@@ -131,6 +131,11 @@ Screenshot:
 
 - Ensure your WordPress site's permalink structure is updated for the custom endpoint to work correctly. This can be done by going to Settings -> Permalinks in the WordPress dashboard and simply clicking "Save Changes".
 
+- Go to the custom endpoint you set in the plugin settings. For example: `https:\\yourwebsite.com\mlut-table-view`
+
+Screenshot:
+![Alt text](image.png)
+
 
 ## Packages Used:
 
