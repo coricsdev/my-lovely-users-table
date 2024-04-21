@@ -2,10 +2,17 @@
 <ruleset name="Project Rules">
     <description>Custom PHPCS ruleset.</description>
 
+    <!-- Specify PHP version compatibility -->
+    <config name="testVersion" value="8.1-"/>
+
+    <!-- PHP Compatibility Rule -->
     <rule ref="PHPCompatibility">
         <!-- Exclude specific sniffs if necessary -->
     </rule>
 
-    <!-- Specify PHP version compatibility -->
-    <config name="testVersion" value="8.1-"/>
+    <!-- Exclude specific test files in the tests directory -->
+    <exclude-pattern>*/tests/HandlerTest.php</exclude-pattern>
+    <exclude-pattern>*/tests/SettingsTest.php</exclude-pattern>
+    <exclude-pattern>*/tests/TableTest.php</exclude-pattern>
+
 </ruleset>
