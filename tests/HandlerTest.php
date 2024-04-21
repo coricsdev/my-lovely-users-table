@@ -36,7 +36,7 @@ class HandlerTest extends \PHPUnit\Framework\TestCase
             // Check if the URL is for a specific user ID
             if (preg_match('/https:\/\/jsonplaceholder.typicode.com\/users\/(\d+)/', $url, $matches)) {
                 $userId = $matches[1];
-                // Assuming you want to simulate a successful response for user ID 1
+                // Assuming to simulate a successful response for user ID 1
                 if ($userId == '1') {
                     return [
                         'body' => json_encode(['id' => 1, 'name' => 'Leanne Graham']), // Simulate a successful API response for user 1
@@ -56,7 +56,7 @@ class HandlerTest extends \PHPUnit\Framework\TestCase
                 ];
             }
         
-            // Default error for any other URLs
+            
             return new \WP_Error('http_request_failed', 'A connection error occurred.');
         });
 
@@ -103,7 +103,7 @@ class HandlerTest extends \PHPUnit\Framework\TestCase
     }
 
     public function testFetchUserDetails() {
-    // Mock the AJAX request
+        // Mock the AJAX request
         $_SERVER['REQUEST_METHOD'] = 'POST';
         $_POST['user_id'] = '1'; // Mocked user ID
 

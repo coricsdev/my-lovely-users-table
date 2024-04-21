@@ -16,5 +16,3 @@ register_shutdown_function(function() {
     // Ensure that Brain\Monkey is torn down after tests
     Monkey\tearDown();
 });
-
-// Add any additional initializations or cleanup needed for your specific tests here

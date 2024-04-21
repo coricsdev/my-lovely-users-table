@@ -9,7 +9,7 @@ use MyLovelyUsersTable\API\Handler;
 class Table
 {
     protected $apiHandler;
-    protected $templatePath; // Declare this property if not already declared
+    protected $templatePath;
 
     public function __construct(Handler $apiHandler = null, $templatePath = null)
     {

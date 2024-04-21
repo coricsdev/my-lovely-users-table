@@ -43,7 +43,6 @@ class TableTest extends \PHPUnit\Framework\TestCase
         $table = new Table($mockHandler);
         $table->run();
 
-        // No actual output to assert; we're primarily testing setup here
         $this->assertTrue(true, "Setup complete without error.");
     }
 

@@ -5,8 +5,7 @@ declare(strict_types=1);
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
-use MyLovelyUsersTable\Table\Settings;  // Ensure this path is correct
-
+use MyLovelyUsersTable\Table\Settings;
 class SettingsTest extends \PHPUnit\Framework\TestCase
 {
     use MockeryPHPUnitIntegration;
@@ -139,13 +138,10 @@ class SettingsTest extends \PHPUnit\Framework\TestCase
         $settings->endpointFieldCallback();
         $output = ob_get_clean();
     
-        // Assuming you want to test for the default endpoint value
         $expectedHtml = "<input type='text' name='my_lovely_users_table_endpoint' value='default-endpoint' />";
         $this->assertStringContainsString($expectedHtml, $output, "The output HTML should contain the correct input field and value.");
     }
-    
-    
-    
+        
     protected function tearDown(): void {
         Monkey\tearDown();
         parent::tearDown();

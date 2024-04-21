@@ -150,3 +150,10 @@ This tool checks for PHP version compatibility issues in our codebase. It's cruc
 - **brain/monkey**
 
 Specifically designed for WordPress, Brain Monkey allows us to mock WordPress-specific functions and actions/filters, making it invaluable for unit testing WordPress plugins where hooks and filters play a significant role.
+
+## Additional Notes
+
+
+### Unit Testing
+
+Adjust the `$basePluginPath` in the `TableTest.php` and `HandlerTest.php` files based on the base path of your plugin directory.

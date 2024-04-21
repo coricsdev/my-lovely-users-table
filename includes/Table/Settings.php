@@ -25,7 +25,7 @@ class Settings
         );
     }
 
-    public function renderOptionsPage(): void // Added return type
+    public function renderOptionsPage(): void 
     {
         ?>
         <div class="wrap">
@@ -41,14 +41,14 @@ class Settings
         <?php
     }
 
-    public function initializeSettings(): void // Added return type
+    public function initializeSettings(): void
     {
         register_setting(
             'my-lovely-users-table-options',
             'my_lovely_users_table_endpoint',
             [
                 'type' => 'string',
-                'sanitize_callback' => [$this, 'validateEndpoint'], // Adjusted method name
+                'sanitize_callback' => [$this, 'validateEndpoint'],
                 'default' => 'my-lovely-users-table',
             ]
         );
@@ -63,7 +63,7 @@ class Settings
         add_settings_field(
             'my-lovely-users-table-endpoint',
             'Endpoint',
-            [$this, 'endpointFieldCallback'], // Adjusted method name
+            [$this, 'endpointFieldCallback'], 
             'my-lovely-users-table',
             'my-lovely-users-table-main'
         );
