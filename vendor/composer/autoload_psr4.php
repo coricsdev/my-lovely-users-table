@@ -8,8 +8,14 @@ $baseDir = dirname($vendorDir);
 return array(
     'VariableAnalysis\\' => array($vendorDir . '/sirbrillig/phpcs-variable-analysis/VariableAnalysis'),
     'SlevomatCodingStandard\\' => array($vendorDir . '/slevomat/coding-standard/SlevomatCodingStandard'),
+    'PhpParser\\' => array($vendorDir . '/nikic/php-parser/lib/PhpParser'),
     'PHPStan\\PhpDocParser\\' => array($vendorDir . '/phpstan/phpdoc-parser/src'),
     'PHPCSStandards\\Composer\\Plugin\\Installers\\PHPCodeSniffer\\' => array($vendorDir . '/dealerdirect/phpcodesniffer-composer-installer/src'),
+    'MyLovelyUsersTable\\Tests\\' => array($baseDir . '/tests'),
     'MyLovelyUsersTable\\' => array($baseDir . '/includes'),
+    'Mockery\\' => array($vendorDir . '/mockery/mockery/library/Mockery'),
     'Inpsyde\\CodingStandard\\Helpers\\' => array($vendorDir . '/inpsyde/php-coding-standards/Inpsyde/Helpers'),
+    'Doctrine\\Instantiator\\' => array($vendorDir . '/doctrine/instantiator/src/Doctrine/Instantiator'),
+    'DeepCopy\\' => array($vendorDir . '/myclabs/deep-copy/src/DeepCopy'),
+    'Brain\\Monkey\\' => array($vendorDir . '/brain/monkey/src'),
 );

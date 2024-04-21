@@ -69,16 +69,16 @@ class Handler
 
         if (!$userId) {
             wp_send_json_error('Invalid user ID.');
-            return; // Early return if the user ID is not valid
+            return;
         }
 
         $userDetails = $this->getUserDetailsById($userId);
+
         if ($userDetails) {
             wp_send_json_success($userDetails);
-            return; // Early return after successfully sending user details
+            return;
         }
 
-        // If the function has not returned by this point, it means no user details were found
         wp_send_json_error('User not found.');
     }
 }

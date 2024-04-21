@@ -17,7 +17,9 @@ if (!defined('WPINC')) {
 require_once __DIR__ . '/vendor/autoload.php';
 
 // Define plugin directory constant
-define('MY_LOVELY_USERS_TABLE_PLUGIN_DIR', plugin_dir_path(__FILE__));
+if (!defined('MY_LOVELY_USERS_TABLE_PLUGIN_DIR')) {
+    define('MY_LOVELY_USERS_TABLE_PLUGIN_DIR', plugin_dir_path(__FILE__));
+}
 
 // Include the plugin initialization file
 require_once MY_LOVELY_USERS_TABLE_PLUGIN_DIR . 'includes/plugin-init.php';

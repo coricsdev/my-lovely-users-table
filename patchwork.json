@@ -1,0 +1,3 @@
+{
+    "redefinable-internals": ["mkdir", "file_exists", "fopen", "is_dir", "file_put_contents", "filter_input"]
+}

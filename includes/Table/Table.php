@@ -9,10 +9,12 @@ use MyLovelyUsersTable\API\Handler;
 class Table
 {
     protected $apiHandler;
+    protected $templatePath; // Declare this property if not already declared
 
-    public function __construct()
+    public function __construct(Handler $apiHandler = null, $templatePath = null)
     {
-        $this->apiHandler = new Handler();
+        $this->apiHandler = $apiHandler ?: new Handler();
+        $this->templatePath = $templatePath ?: plugin_dir_path(dirname(__DIR__)) . 'public/';
         $this->registerSettings();
     }
 
@@ -76,21 +78,27 @@ class Table
         return $vars;
     }
 
-    public function loadTemplate(): void
-    {
+    public function loadTemplate(): void {
         $templateName = 'template.php';
-        $themeTemplatePath = trailingslashit(get_stylesheet_directory()) . 'my-lovely-users-table/' . $templateName;
+        $fullTemplatePath = $this->templatePath . $templateName;
 
-        $template = file_exists($themeTemplatePath) ? $themeTemplatePath : MY_LOVELY_USERS_TABLE_PLUGIN_DIR . 'public/' . $templateName;
-
-        if (file_exists($template)) {
-            include $template;
+        if ($this->checkFileExists($fullTemplatePath)) {
+            $this->includeTemplate($fullTemplatePath);
             return;
         }
-
+    
         echo '<p>Error: No template found for My Lovely Users Table.</p>';
     }
-
+    
+    // Add methods to abstract file system checks and allows easier mocking
+    protected function checkFileExists($path) {
+        return file_exists($path);
+    }
+    
+    protected function includeTemplate($path) {
+        include $path;
+    }
+    
     public function templateRedirect(): void
     {
         $isCustomEndpoint = intval(get_query_var('mlut_users_table', 0));
