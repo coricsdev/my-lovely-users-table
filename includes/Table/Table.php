@@ -78,7 +78,9 @@ class Table
         return $vars;
     }
 
-    public function loadTemplate(): void {
+    public function loadTemplate(): void
+    {
+
         $templateName = 'template.php';
         $fullTemplatePath = $this->templatePath . $templateName;
 
@@ -86,19 +88,23 @@ class Table
             $this->includeTemplate($fullTemplatePath);
             return;
         }
-    
+
         echo '<p>Error: No template found for My Lovely Users Table.</p>';
     }
-    
+
     // Add methods to abstract file system checks and allows easier mocking
-    protected function checkFileExists($path) {
+    protected function checkFileExists($path)
+    {
+
         return file_exists($path);
     }
-    
-    protected function includeTemplate($path) {
+
+    protected function includeTemplate($path)
+    {
+
         include $path;
     }
-    
+
     public function templateRedirect(): void
     {
         $isCustomEndpoint = intval(get_query_var('mlut_users_table', 0));

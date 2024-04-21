@@ -6,12 +6,16 @@ namespace MyLovelyUsersTable\Table;
 
 class Settings
 {
-    public function __construct() {
+    public function __construct()
+    {
+
         add_action('admin_menu', [$this, 'addOptionsPage']);
         add_action('admin_init', [$this, 'initializeSettings']);
     }
-    
-    public function addOptionsPage() {
+
+    public function addOptionsPage()
+    {
+
         add_options_page(
             'My Lovely Users Table Settings',
             'My Lovely Users Table Settings',
@@ -38,7 +42,7 @@ class Settings
     }
 
     public function initializeSettings(): void // Added return type
-    {   
+    {
         register_setting(
             'my-lovely-users-table-options',
             'my_lovely_users_table_endpoint',
