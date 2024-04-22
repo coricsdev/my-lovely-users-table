@@ -123,7 +123,7 @@ This command reads the composer.json file in the plugin's directory and installs
 
 ## Usage
 
-- After activation, visit the plugin settings page to configure any necessary options, such as setting up the custom endpoint or modifying the user table columns.
+- After activation, visit the plugin settings page to configure necessary option, such as setting up the custom endpoint.
 
 Screenshot:
 ![image](https://github.com/coricsdev/my-lovely-users-table/assets/83392299/34e6199a-fad9-4c76-9c43-dfa4919614f5)
