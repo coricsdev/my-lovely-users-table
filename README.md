@@ -80,7 +80,7 @@ add_filter('my_lovely_users_table_reserved_routes', 'add_custom_route_to_reserve
 **Screenshot: ![image](https://github.com/coricsdev/my-lovely-users-table/assets/83392299/a993463e-8786-4b29-b5b7-a8092940cf18)**
 
 ### Override default template
-- **Theme developers  can override the default template by adding a file named** `template.php` **within**  `my-lovely-users-table directory` **in their theme**
+- **Theme developers  can override the default template by adding a file named** `template.php` **within**  `my-lovely-users-table` directory **in their theme**
 
 ## Installation (Git and Composer)
 **Prerequisites:**
